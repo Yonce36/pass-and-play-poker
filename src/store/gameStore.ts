@@ -7,7 +7,15 @@ import { createDeck, shuffleDeck } from '@/core/deck';
 import { evaluateHand } from '@/core/handEval';
 import { distributePots, type Payouts } from '@/core/showdown';
 import { buildPots } from '@/core/sidePot';
-import type { BettingState, Card, GameConfig, GameState, HandResult, Player } from '@/types';
+import type {
+  BettingState,
+  Card,
+  GameConfig,
+  GameState,
+  HandRank,
+  HandResult,
+  Player,
+} from '@/types';
 
 const DEFAULT_CONFIG: GameConfig = {
   smallBlind: 10,
@@ -148,10 +156,122 @@ function finalizeHandComplete(state: GameState): GameState {
   return { ...state, players, phase: remaining.length <= 1 ? 'gameOver' : 'handComplete' };
 }
 
+/** SPEC 2: BB > SB、startingChips > BB、すべて正整数。startGame境界での必須バリデーション */
+export function validateGameConfig(config: GameConfig): void {
+  const positiveInts: Array<[string, number]> = [
+    ['smallBlind', config.smallBlind],
+    ['bigBlind', config.bigBlind],
+    ['startingChips', config.startingChips],
+  ];
+  for (const [name, value] of positiveInts) {
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`validateGameConfig: ${name} must be a positive integer`);
+    }
+  }
+  if (config.bigBlind <= config.smallBlind) {
+    throw new Error('validateGameConfig: bigBlind must be greater than smallBlind');
+  }
+  if (config.startingChips <= config.bigBlind) {
+    throw new Error('validateGameConfig: startingChips must be greater than bigBlind');
+  }
+}
+
+/**
+ * handoff中の対象プレイヤーの手札のみを返す selector（leak-auditor W-1対応）。
+ * UIコンポーネントは players[].cards を直接 subscribe せず、必ずこれ経由で取得する。
+ * reveal 以外、または currentViewerPlayerId 未設定のときは null（DOM に一切出さないため）。
+ */
+export function selectVisibleCards(state: GameState): Card[] | null {
+  if (state.handoff.step !== 'reveal' || !state.handoff.currentViewerPlayerId) return null;
+  const viewer = state.players.find((p) => p.id === state.handoff.currentViewerPlayerId);
+  return viewer ? viewer.cards : null;
+}
+
+export interface HandCompleteEntry {
+  playerId: string;
+  name: string;
+  amount: number;
+  /** showdown のときのみ。fold勝ちでは null（手札公開なし） */
+  handRank: HandRank | null;
+  cards: Card[] | null;
+}
+
+/**
+ * handComplete 画面の表示用ビュー（leak-auditor C-1/W-1 対応）。
+ * ゲームロジックをコンポーネントに書かないため、core の再計算はここに集約する。
+ * showdown 参加者の判定は「非fold・非sittingOut で当ハンドに拠出があり手札を持つ」で行う。
+ * finalizeHandComplete 後は敗者が busted に変わるため status active/allIn だけでは判定できず、
+ * 逆に status !== 'folded' だけでは前ハンドまでに busted した傍観者（拠出0）が混入し
+ * fold勝ちを showdown と誤認して手札を公開してしまう（3人以上で発生）。
+ */
+export function selectHandCompleteView(state: GameState): {
+  potTotal: number;
+  isShowdown: boolean;
+  entries: HandCompleteEntry[];
+} {
+  const potTotal = state.players.reduce((sum, p) => sum + p.totalContribution, 0);
+  const participants = state.players.filter(
+    (p) =>
+      p.status !== 'folded' &&
+      p.status !== 'sittingOut' &&
+      p.totalContribution > 0 &&
+      p.cards.length > 0,
+  );
+  const isShowdown = participants.length >= 2 && state.dealerButtonPlayerId !== null;
+
+  if (!isShowdown) {
+    // fold勝ち: 唯一の残存者が全ポット獲得。手札は公開しない（STATE_MACHINE 3）
+    const winner = state.players.find((p) => p.status === 'active' || p.status === 'allIn');
+    return {
+      potTotal,
+      isShowdown: false,
+      entries: winner
+        ? [{ playerId: winner.id, name: winner.name, amount: potTotal, handRank: null, cards: null }]
+        : [],
+    };
+  }
+
+  // showdown: resolveShowdown と同じ core 関数から表示専用に再導出する
+  // （busted になった敗者は buildPots の eligible から外れるが、敗者の獲得額は元々 0 のため表示結果は一致する）
+  const results = participants.map((p) => evaluateHand(p.id, p.cards, state.communityCards));
+  const payouts = distributePots(
+    buildPots(state.players),
+    results,
+    state.players,
+    state.dealerButtonPlayerId!,
+  );
+  const resultById = new Map(results.map((r) => [r.playerId, r]));
+  return {
+    potTotal,
+    isShowdown: true,
+    entries: participants.map((p) => ({
+      playerId: p.id,
+      name: p.name,
+      amount: payouts[p.id] ?? 0,
+      handRank: resultById.get(p.id)!.handRank,
+      cards: p.cards,
+    })),
+  };
+}
+
 interface GameStore extends GameState {
   startGame: (playerNames: string[], configOverrides?: Partial<GameConfig>, random?: () => number) => void;
   submitAction: (action: PlayerAction, timestamp?: number) => void;
   startNextHand: (random?: () => number, timestamp?: number) => void;
+  /** STATE_MACHINE 4: idle/locked から交代を開始する。PINありなら pinEntry、なしなら confirm1 */
+  beginHandoff: (targetPlayerId: string) => void;
+  /** confirm1 → confirm2 */
+  confirmIdentity: () => void;
+  /** confirm2 の一方向スワイプ完了 → reveal */
+  revealCards: () => void;
+  /** pinEntry でのPIN入力。一致で reveal、不一致で pinAttempts++ のまま pinEntry に留まる */
+  submitPin: (pin: string) => void;
+  /** reveal → idle（次の handoff に備える） */
+  concealCards: () => void;
+  /** 任意の状態から locked へ（visibilitychange/blur/pagehide/復元 用） */
+  lock: () => void;
+  /** gameOver から setup へ戻る（新しいゲームを始める） */
+  resetToSetup: () => void;
 }
 
 type PersistedGameState = Pick<
@@ -174,32 +294,40 @@ const noopStorage: StateStorage = {
   removeItem: () => {},
 };
 
+const INITIAL_STATE: GameState = {
+  handNumber: 0,
+  phase: 'setup',
+  config: DEFAULT_CONFIG,
+  players: [],
+  activePlayerId: null,
+  dealerButtonPlayerId: null,
+  betting: EMPTY_BETTING,
+  pots: [],
+  communityCards: [],
+  deck: [],
+  handoff: { step: 'locked', targetPlayerId: null, currentViewerPlayerId: null, pinAttempts: 0 },
+  timer: {
+    enabled: false,
+    durationSec: 30,
+    remainingSec: 30,
+    timeoutAction: 'autoCheckOrFold',
+    isPaused: true,
+  },
+  actionLog: [],
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set) => ({
-      handNumber: 0,
-      phase: 'setup',
-      config: DEFAULT_CONFIG,
-      players: [],
-      activePlayerId: null,
-      dealerButtonPlayerId: null,
-      betting: EMPTY_BETTING,
-      pots: [],
-      communityCards: [],
-      deck: [],
-      handoff: { step: 'locked', targetPlayerId: null, currentViewerPlayerId: null, pinAttempts: 0 },
-      timer: {
-        enabled: false,
-        durationSec: 30,
-        remainingSec: 30,
-        timeoutAction: 'autoCheckOrFold',
-        isPaused: true,
-      },
-      actionLog: [],
+      ...INITIAL_STATE,
+
+      /** gameOver から setup へ戻り、新しいゲームを開始できる状態にリセットする */
+      resetToSetup: () => set(() => ({ ...INITIAL_STATE })),
 
       startGame: (playerNames, configOverrides, random = Math.random) => {
         set(() => {
           const config: GameConfig = { ...DEFAULT_CONFIG, ...configOverrides };
+          validateGameConfig(config);
           const players: Player[] = playerNames.map((name, i) => ({
             id: `player-${i}`,
             seatIndex: i,
@@ -271,6 +399,71 @@ export const useGameStore = create<GameStore>()(
           return startHand(resetState, random, timestamp);
         });
       },
+
+      beginHandoff: (targetPlayerId) => {
+        set((state) => {
+          const target = state.players.find((p) => p.id === targetPlayerId);
+          if (!target) throw new Error(`beginHandoff: unknown playerId ${targetPlayerId}`);
+          return {
+            handoff: {
+              step: target.pin ? 'pinEntry' : 'confirm1',
+              targetPlayerId,
+              currentViewerPlayerId: null,
+              pinAttempts: 0,
+            },
+          };
+        });
+      },
+
+      confirmIdentity: () => {
+        set((state) => {
+          if (state.handoff.step !== 'confirm1') {
+            throw new Error(`confirmIdentity: expected confirm1, got ${state.handoff.step}`);
+          }
+          return { handoff: { ...state.handoff, step: 'confirm2' } };
+        });
+      },
+
+      revealCards: () => {
+        set((state) => {
+          if (state.handoff.step !== 'confirm2') {
+            throw new Error(`revealCards: expected confirm2, got ${state.handoff.step}`);
+          }
+          if (!state.handoff.targetPlayerId) throw new Error('revealCards: targetPlayerId is null');
+          return {
+            handoff: { ...state.handoff, step: 'reveal', currentViewerPlayerId: state.handoff.targetPlayerId },
+          };
+        });
+      },
+
+      submitPin: (pin) => {
+        set((state) => {
+          if (state.handoff.step !== 'pinEntry') {
+            throw new Error(`submitPin: expected pinEntry, got ${state.handoff.step}`);
+          }
+          const target = state.players.find((p) => p.id === state.handoff.targetPlayerId);
+          if (!target) throw new Error('submitPin: targetPlayerId is null or unknown');
+          if (target.pin !== null && target.pin === pin) {
+            return { handoff: { ...state.handoff, step: 'reveal', currentViewerPlayerId: target.id } };
+          }
+          return { handoff: { ...state.handoff, pinAttempts: state.handoff.pinAttempts + 1 } };
+        });
+      },
+
+      concealCards: () => {
+        set((state) => {
+          if (state.handoff.step !== 'reveal') {
+            throw new Error(`concealCards: expected reveal, got ${state.handoff.step}`);
+          }
+          return { handoff: { step: 'idle', targetPlayerId: null, currentViewerPlayerId: null, pinAttempts: 0 } };
+        });
+      },
+
+      lock: () => {
+        set((state) => ({
+          handoff: { ...state.handoff, step: 'locked', currentViewerPlayerId: null },
+        }));
+      },
     }),
     {
       name: 'pass-and-play-poker',
@@ -289,11 +482,13 @@ export const useGameStore = create<GameStore>()(
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<PersistedGameState> | undefined;
+        // 独立レビューW-2: durationSec は persisted.config.timerDurationSec から導出する（デフォルト固定値に戻さない）
+        const durationSec = persisted?.config?.timerDurationSec ?? currentState.timer.durationSec;
         return {
           ...currentState,
           ...persisted,
           handoff: { step: 'locked', targetPlayerId: null, currentViewerPlayerId: null, pinAttempts: 0 },
-          timer: { ...currentState.timer, remainingSec: currentState.timer.durationSec, isPaused: true },
+          timer: { ...currentState.timer, durationSec, remainingSec: durationSec, isPaused: true },
           actionLog: [],
         };
       },
