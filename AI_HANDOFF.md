@@ -2,7 +2,21 @@
 
 ## 現在のPhaseと完了内容
 
-**Phase 9 完了(コード側。iOS実機検証はユーザー待ち)** — PWA導入
+**Phase 10 完了 = 初期版(v0.1)リリース** 🎉
+
+- Vercel本番: https://pass-and-play-poker.vercel.app (mainへのpushで自動デプロイ)
+- **iOS実機検証 全項目パス(2026-07-16、ユーザー確認済み)**: standalone表示 / スリープ復帰・通知シェードでlocked / 戻るスワイプでrevealに戻れない / 復元時locked / セーフエリア干渉なし / オフライン起動
+- README.md を製品向けに全面書き換え(遊び方 / iOSアプリスイッチャーのサムネイル注意書き(SPEC 6要件) / 開発手順 / アーキテクチャ)
+
+### 以降の作業候補(未着手)
+
+- タイマー機能のstore/UI連動(SPEC 3.9 / STATE_MACHINE 5)
+- PIN設定UI(store側のpinEntry/submitPinは実装済み)
+- gameOver時に最終ハンドのshowdown内容を表示(UX改善)
+- アイコンPNGのデザイン差し替え(現状プレースホルダ)
+- 有料版候補: 3〜6人UI解放 / ブラインド上昇 / 履歴UI / テーマ
+
+## 前Phase: Phase 9 — PWA導入
 
 - @serwist/next 9.5.11 導入。`next.config.ts` で withSerwist(swSrc=src/app/sw.ts、開発時disable)、`src/app/sw.ts`(precache + defaultCache + navigation fallback '/')
 - **Next 16 の Turbopack ビルドは serwist(webpackプラグイン)と衝突するため、`build` スクリプトを `next build --webpack` に変更**(dev は Turbopack のまま。SPEC 6 の「serwist第一候補で検証」の帰結)

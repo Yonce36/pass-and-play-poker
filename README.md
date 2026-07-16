@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pass & Play Poker
 
-## Getting Started
+1台のスマホを手渡しして遊ぶ、完全オフラインのテキサスホールデム。
 
-First, run the development server:
+**▶ https://pass-and-play-poker.vercel.app**
+
+- 2人用(コアロジックは2〜6人対応で設計済み)
+- サーバー・アカウント登録なし。ゲーム状態は端末内(localStorage)だけに保存
+- PWA対応。ホーム画面に追加すればオフラインでも遊べる
+- 無料・広告なし
+
+## 遊び方
+
+1. iPhoneのSafariで上のURLを開き、共有ボタン →「ホーム画面に追加」
+2. アイコンから起動し、プレイヤー名とチップ/ブラインド(デフォルト 1000 / SB 10 / BB 20)を設定して開始
+3. 画面の案内に従って端末を手渡し、本人確認 → スライドで自分だけ手札を確認 → アクション(フォールド / チェック / コール / ベット / レイズ / オールイン)
+4. 手札は自分の番の確認中しか表示されません。スリープ・アプリ切替・戻る操作をすると自動的にロックされます
+5. どちらかのチップが尽きたらゲーム終了。リバイ(買い直し)はありません
+
+### ルール補足
+
+- ヘッズアップ(2人)ではボタン側がSBで、プリフロップはSBが先、フロップ以降はBBが先に行動します
+- BBオプション、ショートオールインの非リオープン、サイドポット、チョップ(端数はボタンの左隣から時計回りで最初の対象者へ)に対応
+- アンドゥなし。確定したアクションは取り消せません
+
+## ⚠️ 知っておいてほしいこと
+
+- **iOSのアプリスイッチャーには直前の画面のサムネイルが表示されます。** これは技術的に完全には防げません。手札を見た直後にアプリを切り替えると、サムネイル越しに手札が見える可能性があります。「手札を見たら伏せるボタンで閉じてから渡す」運用でカバーしてください
+- ゲーム状態(手札・山札を含む)は端末のlocalStorageに平文で保存されます。オフライン専用・カジュアル用途の割り切りです
+
+## 開発
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev        # 開発サーバー(Service Workerは無効)
+pnpm test       # vitest(コアロジック・store・handoffのテスト)
+pnpm build      # 本番ビルド(webpack。Service Worker生成を含む)
+pnpm lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+パッケージマネージャーは **pnpm のみ**を使用してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 技術構成
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Next.js (App Router) / TypeScript strict / Tailwind CSS / Zustand(+persist) / Vitest / Serwist(PWA)
+- `src/core/` — ポーカーロジック(デッキ / 役判定 / ベッティング / サイドポット / ショーダウン)。**pure functionのみ**で、乱数・時刻は引数で注入(テスト再現性のため)
+- `src/store/` — Zustand store。core関数を呼ぶ唯一の場所。persist対象から手札の表示状態を除外し、復元時は必ずロック状態に戻す
+- `src/components/` — UI。手札は「表示が許可された瞬間」だけ条件付きレンダリングでDOMに出力(CSS非表示による「隠し」は不使用)
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+設計・仕様の詳細は `docs/SPEC.md`(ルール・データモデル)と `docs/STATE_MACHINE.md`(状態遷移)を参照。開発ワークフロー(サブエージェント監査体制)は `CLAUDE.md` に記載しています。
