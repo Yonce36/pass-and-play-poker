@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { HandoffGuard } from "@/components/HandoffGuard";
 import "./globals.css";
@@ -16,6 +16,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Pass & Play Poker",
   description: "1台のスマホを手渡しして遊ぶオフラインのテキサスホールデム",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "P&P Poker",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#059669",
+  // ノッチ端末のセーフエリアまで描画する(standalone表示でのアクションボタン干渉はPhase 9実機確認項目)
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -2,7 +2,23 @@
 
 ## 現在のPhaseと完了内容
 
-**Phase 8 完了** — Role B(UI実装)+ メインセッション(レビュー・leak-auditor CRITICAL 2件修正)
+**Phase 9 完了(コード側。iOS実機検証はユーザー待ち)** — PWA導入
+
+- @serwist/next 9.5.11 導入。`next.config.ts` で withSerwist(swSrc=src/app/sw.ts、開発時disable)、`src/app/sw.ts`(precache + defaultCache + navigation fallback '/')
+- **Next 16 の Turbopack ビルドは serwist(webpackプラグイン)と衝突するため、`build` スクリプトを `next build --webpack` に変更**(dev は Turbopack のまま。SPEC 6 の「serwist第一候補で検証」の帰結)
+- `src/app/manifest.ts`(standalone / portrait / theme #059669)、`public/icons/`(プレースホルダPNG、後で差し替え可)、`src/app/apple-icon.png`、layout に appleWebApp・viewport(viewportFit: cover)
+- 生成物 `public/sw.js` は .gitignore 済み。SW登録は @serwist/next が自動注入(本番ビルドのみ)
+- 検証: `pnpm build` で sw.js 生成 / `pnpm start` で manifest・sw.js 配信と serviceWorker.register の注入を確認 / テスト113件グリーン / leak-auditor 監査パス(CRITICALゼロ。SWキャッシュに手札が乗る経路なし、'/'は静的シェル)
+
+### iOS実機検証チェックリスト(ユーザー実施。Vercelデプロイ後)
+
+1. ホーム画面追加 → standalone 表示・アイコン
+2. **standalone でスリープ復帰/アプリ切替/通知シェード → locked に落ちるか**(leak-auditor WARN: iOSはstandaloneでblurが発火しない場合がある。NGなら freeze イベント等を追加)
+3. エッジスワイプの戻る操作で reveal に戻れないか
+4. セーフエリアとアクションボタンの干渉(viewportFit: cover)
+5. 機内モードでオフライン起動(SWのfallback)
+
+## 前Phase: Phase 8 — Role B(UI実装)+ メインセッション(レビュー・leak-auditor CRITICAL 2件修正)
 
 - 画面: `src/components/` — SetupScreen(名前2人+チップ/SB/BB設定+バリデーション)/ TableScreen(ポット・コミュニティ・プレイヤー状態・手番)/ HandoffFlow(idle/locked→confirm1→confirm2一方向スライド→reveal、PINあり時はpinEntry)/ ActionPanel(fold/check/call/bet/raise/allIn、合法性の事前フィルタ)/ HandCompleteScreen / GameOverScreen / CardView / HandoffGuard
 - store 追加: `beginHandoff / confirmIdentity / revealCards / submitPin / concealCards / lock / resetToSetup`、`validateGameConfig`(SPEC 2、startGame境界でthrow)、`selectVisibleCards`(reveal中の対象者の手札のみ返す。UIの手札取得はこれ経由のみ)、`selectHandCompleteView`(handComplete表示用の再計算を store に集約)
