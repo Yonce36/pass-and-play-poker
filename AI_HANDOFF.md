@@ -2,7 +2,14 @@
 
 ## 現在のPhaseと完了内容
 
-**v0.1 リリース後: UIビジュアル刷新(2026-07-16)**
+**v0.1 リリース後: all-in ショーダウン演出(2026-07-16)**
+
+- store に UI演出専用フィールド `runOutFrom: number | null` を追加(ランアウト発生時に公開済みだったコミュニティカード枚数。カード情報は持たない・persist対象外・merge で明示 null)。`submitAction` で「showdown 直行かつ直前の公開が5枚未満」を検知して設定、startGame/startNextHand のブラインド全員all-in端ケースは 0
+- HandCompleteScreen: runOutFrom があるとき、手札を先に公開(all-in showdown = 公開確定)→ ボードをフロップ3枚→ターン→リバーと1.1秒間隔で条件付きレンダリングでめくる。勝者バナー・獲得額・役ラベル・減光・「次のハンドへ」ボタンはめくり終わるまで非表示。めくり中は「ALL IN / ショーダウン」ヘッダー+ポット総額
+- page.tsx: gameOver 直行時(all-in で敗者 bust。2人プレイの all-in の大半)も `GameOverFlow` 経由で最終ハンドの HandCompleteScreen(「最終結果へ」ボタン)を先に表示 → GameOverScreen。申し送りの「gameOver時に最終ハンド表示」も同時に解消
+- 検証: テスト120件グリーン(test-guardian が runOutFrom リグレッション7件追加)/ tsc / eslint / build パス / **leak-auditor 監査パス**(CRITICAL 0。INFO-1 の merge 明示リセットは対応済み。WARN は既存の HandCompleteScreen 全state subscribe の残存指摘のみ)
+
+## 前作業: UIビジュアル刷新(2026-07-16)
 
 - ダークテーマ固定のポーカールーム風デザイン(globals.css にフェルト/レール/ゴールドのテーマ変数、body のラジアルグラデーション)
 - CardView 刷新(sm/md/lg サイズ、四隅+中央スート、`dimmed` 減光)+ 新コンポーネント CardBack(実カード値を受け取らない純装飾)/ CardSlot / ChipAmount
@@ -64,7 +71,7 @@
 
 - タイマー機能のUI・store連動が未実装(SPEC 3.9 / STATE_MACHINE 5。デフォルトOFFのため初期リリースはこのままでも可。実装するなら reveal 中のみカウント・timeout で autoCheckOrFold)
 - PIN設定UI が未実装(Player.pin は常に null。pinEntry 画面と submitPin は実装済みなので設定画面に PIN 入力を足せば有効化される)
-- gameOver 時に最終ハンドの showdown 内容が表示されない(HandCompleteScreen を経由せず GameOverScreen に直行するため。UX改善候補)
+- ~~gameOver 時に最終ハンドの showdown 内容が表示されない~~(2026-07-16 GameOverFlow で解消)
 - HandCompleteScreen の `useGameStore()`(全状態subscribe)は将来 selector 化を検討(leak-auditor I-A、効率面のみ)
 - `tests/betting.test.ts:177` の pre-existing prefer-const lint(次にファイルを触るときに修正)
 

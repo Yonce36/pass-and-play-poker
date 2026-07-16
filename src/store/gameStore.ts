@@ -267,6 +267,12 @@ export function selectHandCompleteView(state: GameState): {
 }
 
 interface GameStore extends GameState {
+  /**
+   * all-in ランアウト演出用(UI専用・persist対象外)。ランアウト発生時、
+   * 公開済みだったコミュニティカード枚数(0/3/4)。null = 演出なし(通常showdown/fold勝ち)。
+   * カード情報は含まず枚数のみなので漏洩リスクはない。
+   */
+  runOutFrom: number | null;
   startGame: (playerNames: string[], configOverrides?: Partial<GameConfig>, random?: () => number) => void;
   submitAction: (action: PlayerAction, timestamp?: number) => void;
   startNextHand: (random?: () => number, timestamp?: number) => void;
@@ -332,9 +338,10 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set) => ({
       ...INITIAL_STATE,
+      runOutFrom: null,
 
       /** gameOver から setup へ戻り、新しいゲームを開始できる状態にリセットする */
-      resetToSetup: () => set(() => ({ ...INITIAL_STATE })),
+      resetToSetup: () => set(() => ({ ...INITIAL_STATE, runOutFrom: null })),
 
       startGame: (playerNames, configOverrides, random = Math.random) => {
         set(() => {
@@ -374,17 +381,23 @@ export const useGameStore = create<GameStore>()(
             },
             actionLog: [],
           };
-          return startHand(fresh, random, Date.now());
+          const started = startHand(fresh, random, Date.now());
+          // ブラインドだけで全員all-inの端ケース: コミュニティ0枚からのランアウト演出
+          return { ...started, runOutFrom: started.communityCards.length === 5 ? 0 : null };
         });
       },
 
       submitAction: (action, timestamp = Date.now()) => {
         set((state) => {
+          const publicCardsBefore = state.communityCards.length;
           let next = applyAction(state, action, timestamp);
+          // showdown で公開枚数が一気に5枚へ飛んだ = all-in ランアウト（endStreet の一括公開）
+          const runOutFrom =
+            next.phase === 'showdown' && publicCardsBefore < 5 ? publicCardsBefore : null;
           if (next.phase === 'showdown') next = resolveShowdown(next);
           else if (next.phase === 'handComplete') next = resolveFoldWin(next);
           if (next.phase === 'handComplete') next = finalizeHandComplete(next);
-          return next;
+          return { ...next, runOutFrom };
         });
       },
 
@@ -408,7 +421,8 @@ export const useGameStore = create<GameStore>()(
             betting: EMPTY_BETTING,
             activePlayerId: null,
           };
-          return startHand(resetState, random, timestamp);
+          const started = startHand(resetState, random, timestamp);
+          return { ...started, runOutFrom: started.communityCards.length === 5 ? 0 : null };
         });
       },
 
@@ -502,6 +516,7 @@ export const useGameStore = create<GameStore>()(
           handoff: { step: 'locked', targetPlayerId: null, currentViewerPlayerId: null, pinAttempts: 0 },
           timer: { ...currentState.timer, durationSec, remainingSec: durationSec, isPaused: true },
           actionLog: [],
+          runOutFrom: null,
         };
       },
     },
