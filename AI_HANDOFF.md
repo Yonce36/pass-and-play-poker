@@ -2,7 +2,17 @@
 
 ## 現在のPhaseと完了内容
 
-**Phase 10 完了 = 初期版(v0.1)リリース** 🎉
+**v0.1 リリース後: UIビジュアル刷新(2026-07-16)**
+
+- ダークテーマ固定のポーカールーム風デザイン(globals.css にフェルト/レール/ゴールドのテーマ変数、body のラジアルグラデーション)
+- CardView 刷新(sm/md/lg サイズ、四隅+中央スート、`dimmed` 減光)+ 新コンポーネント CardBack(実カード値を受け取らない純装飾)/ CardSlot / ChipAmount
+- TableScreen をフェルトテーブル+席(Seat)レイアウトに刷新。Seat の props は `SeatPlayer`(cards を含まない Pick + hasCards)に限定
+- HandoffFlow: confirm/pinEntry/reveal を不透明の全画面 Overlay 化(背後のテーブル遮蔽)、idle/locked はテーブル下のバーに変更。SafePlayer・history 制御・store 側 PIN 照合は維持
+- showdown 時に役に使われたベスト5枚をハイライト(`selectHandCompleteView` に `bestFiveCards` 追加。表示専用の導出値で persist 対象外)
+- アニメーション: カードフリップイン / 手番グロー / 勝者ポップ / 画面フェード(CSS keyframes のみ)
+- 検証: テスト113件グリーン / tsc / eslint / `pnpm build` パス / **leak-auditor 監査パス**(CRITICAL 0。WARN 1件「Seat に cards 込み Player が props 渡し」は SeatPlayer 化で同コミット内に修正済み)
+
+## 前リリース: Phase 10 完了 = 初期版(v0.1)リリース 🎉
 
 - Vercel本番: https://pass-and-play-poker.vercel.app (mainへのpushで自動デプロイ)
 - **iOS実機検証 全項目パス(2026-07-16、ユーザー確認済み)**: standalone表示 / スリープ復帰・通知シェードでlocked / 戻るスワイプでrevealに戻れない / 復元時locked / セーフエリア干渉なし / オフライン起動

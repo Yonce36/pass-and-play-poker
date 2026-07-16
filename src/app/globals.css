@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --felt: #14532d;
+  --felt-light: #166534;
+  --rail: #451a03;
+  --gold: #fbbf24;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-felt: var(--felt);
+  --color-felt-light: var(--felt-light);
+  --color-rail: var(--rail);
+  --color-gold: var(--gold);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  /* ダークテーマ固定(ポーカールームの雰囲気を優先し、ライトモードは提供しない) */
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, #1c1917 0%, transparent 60%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== アニメーション ===== */
+
+/* コミュニティカード・手札の登場(フリップイン) */
+@keyframes card-flip-in {
+  0% {
+    transform: perspective(600px) rotateY(90deg) translateY(6px);
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) translateY(0);
+    opacity: 1;
+  }
+}
+.animate-card-in {
+  animation: card-flip-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-card-in:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.animate-card-in:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.animate-card-in:nth-child(4) {
+  animation-delay: 0.24s;
+}
+.animate-card-in:nth-child(5) {
+  animation-delay: 0.32s;
+}
+
+/* 手番プレイヤーのグロー */
+@keyframes turn-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.7), 0 0 14px 2px rgba(251, 191, 36, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 1), 0 0 22px 6px rgba(251, 191, 36, 0.45);
+  }
+}
+.animate-turn-glow {
+  animation: turn-glow 1.8s ease-in-out infinite;
+}
+
+/* 勝者バナー */
+@keyframes winner-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-winner-pop {
+  animation: winner-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* チップ獲得額のフロート */
+@keyframes chip-float {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-chip-float {
+  animation: chip-float 0.6s ease-out 0.3s both;
+}
+
+/* 画面全体のフェードイン(handoff遷移用) */
+@keyframes screen-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-screen-fade {
+  animation: screen-fade 0.28s ease-out both;
 }

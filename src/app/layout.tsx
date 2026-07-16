@@ -39,7 +39,7 @@ export default function RootLayout({
       lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full min-w-[375px] flex flex-col">
+      <body className="flex min-h-dvh min-w-[375px] flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <HandoffGuard />
         {children}
       </body>

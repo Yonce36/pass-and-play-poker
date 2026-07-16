@@ -194,6 +194,8 @@ export interface HandCompleteEntry {
   /** showdown のときのみ。fold勝ちでは null（手札公開なし） */
   handRank: HandRank | null;
   cards: Card[] | null;
+  /** showdown のときのみ。役に使われた最良5枚（UIのハイライト用） */
+  bestFiveCards: Card[] | null;
 }
 
 /**
@@ -226,7 +228,16 @@ export function selectHandCompleteView(state: GameState): {
       potTotal,
       isShowdown: false,
       entries: winner
-        ? [{ playerId: winner.id, name: winner.name, amount: potTotal, handRank: null, cards: null }]
+        ? [
+            {
+              playerId: winner.id,
+              name: winner.name,
+              amount: potTotal,
+              handRank: null,
+              cards: null,
+              bestFiveCards: null,
+            },
+          ]
         : [],
     };
   }
@@ -250,6 +261,7 @@ export function selectHandCompleteView(state: GameState): {
       amount: payouts[p.id] ?? 0,
       handRank: resultById.get(p.id)!.handRank,
       cards: p.cards,
+      bestFiveCards: resultById.get(p.id)!.bestFiveCards,
     })),
   };
 }
