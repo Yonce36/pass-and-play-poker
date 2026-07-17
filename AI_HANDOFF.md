@@ -2,7 +2,25 @@
 
 ## 現在のPhaseと完了内容
 
-**Expo移管 Phase M2: Expo アプリ骨組み+全画面 1:1 移植(2026-07-17)**
+**Expo移管 M2後: 実機フィードバック修正(2026-07-17、コミット済み・ツリークリーン)**
+
+- `8198594`/`f26c1e7`: Expo SDK を **54** へダウングレード(App Store 配布版 Expo Go が対応する版に合わせる)
+- `4f4f309`: pnpm モノレポで React が二重解決されるのを Metro resolver で単一化(Invalid hook call 対策)
+- `4ec5f07`: `@react-native-community/slider` を廃止し、**confirm2 は長押しリビール**(押している間ゲージ進行)に変更。ActionPanel のベット額はスライダー→ **BB刻みステッパー+クイックボタン** に変更
+- 検証: Web テスト120件グリーン / mobile `tsc --noEmit` パス
+
+### 実機検証チェックリスト(ユーザー実施待ち。`cd apps/mobile && pnpm start` → Expo Go)
+
+1. iOS: reveal 中にホームへスワイプ → アプリスイッチャーのスナップショットに手札が写らないか(W-2)
+2. iOS: reveal 中に通知センター/コントロールセンターを引き出したとき locked に落ちるか
+3. Android: reveal 中の Recents サムネイル・スクリーンショットが黒画面か(FLAG_SECURE)
+4. スワイプキル→再起動: locked で復帰し、起動時に SetupScreen が一瞬出ないか(hydration ゲート)
+5. 長押しリビールとベット額ステッパーの操作感(誤発火・連打での不具合がないか)
+6. ひととおりのハンド進行(fold勝ち / showdown / all-in ランアウト演出 / gameOver)
+
+パス後: リッチグラフィックフェーズ(SVGアセット+Reanimated)へ。
+
+## 前Phase: Expo移管 Phase M2: Expo アプリ骨組み+全画面 1:1 移植(2026-07-17)
 
 - `apps/mobile`(@pass-and-play/mobile、Expo SDK 57 / RN 0.86 / blank-typescript)を新設。pnpm workspace に `apps/*` 追加。ナビゲーションライブラリなし(Web版と同じ phase スイッチの単一画面構成)
 - 全画面を StyleSheet で 1:1 移植: SetupScreen / TableScreen / ActionPanel(スライダーは @react-native-community/slider)/ HandoffFlow(全ステップ)/ HandCompleteScreen(all-in 段階ランアウト演出含む)/ GameOverScreen(GameOverFlow 含む)/ CardView 一式。アニメーションは意図的に未実装(リッチ化フェーズで Reanimated 予定)
