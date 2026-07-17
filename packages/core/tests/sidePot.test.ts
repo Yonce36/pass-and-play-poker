@@ -1,12 +1,12 @@
 // Phase 6: sidePot / showdown のテスト（SPEC 4.4 / 4.5 / 7 準拠、テスト先行）
 // SPEC 7: テスト入力は betting エンジンの実出力を使う（postBlinds → applyAction の列で状態を作る）
 import { describe, expect, it } from 'vitest';
-import { applyAction, postBlinds } from '@/core/betting';
-import { createDeck } from '@/core/deck';
-import { evaluateHand } from '@/core/handEval';
-import { buildPots } from '@/core/sidePot';
-import { distributePots } from '@/core/showdown';
-import type { Card, GameConfig, GameState, HandResult, Player } from '@/types';
+import { applyAction, postBlinds } from '../src/betting';
+import { createDeck } from '../src/deck';
+import { evaluateHand } from '../src/handEval';
+import { buildPots } from '../src/sidePot';
+import { distributePots } from '../src/showdown';
+import type { Card, GameConfig, GameState, HandResult, Player } from '../src/types';
 
 const CONFIG: GameConfig = {
   smallBlind: 10,

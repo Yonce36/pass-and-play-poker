@@ -2,6 +2,26 @@
 
 ## 現在のPhaseと完了内容
 
+**Expo移管 Phase M1: pnpm ワークスペース化 + core 切り出し(2026-07-17)**
+
+方針(ユーザー承認済み): Expo(React Native)へUIを移管し、リッチグラフィックは移管後に RN 側で実装する。Web版 v0.1 は凍結気味に維持。
+
+- `packages/core`(@pass-and-play/core)を新設し、`src/types` → `src/core/*` → 旧 `src/store/gameStore.ts` を移動。core系テスト4ファイルも `packages/core/tests/` へ(importパスのみ書き換え)
+- `useGameStore` シングルトンを `createGameStore(getStorage)` ファクトリに変更。storage はプラットフォーム側が注入(Web: localStorage / RN: AsyncStorage 予定)。**partialize / merge / persist name は core 側に閉じ込め、アプリ側で上書きさせない**
+- Web側シム: `src/store/gameStore.ts`(localStorage注入+再エクスポート)と `src/types/index.ts`(型再エクスポート)により **UIコンポーネントは無変更**
+- next.config に `transpilePackages: ['@pass-and-play/core']`。Vercel はルートの Next アプリのまま(設定変更不要)
+- 申し送りだった `betting.test.ts:177` の prefer-const lint を移動ついでに修正(--fix、ロジック無変更)
+- 検証: tsc / テスト120件 / eslint / `pnpm build` すべてパス / **leak-auditor 監査パス**(CRITICAL 0・WARN 0。persist name 'pass-and-play-poker' 不変=既存ユーザーの復元維持を確認)
+
+### 次: Phase M2 — Expo アプリ骨組み
+
+- `apps/mobile`(または `packages/` 外)に Expo アプリを新設し、画面を現状の見た目のまま 1:1 移植
+- Web API の置き換え: HandoffGuard(blur/visibilitychange/pagehide)→ `AppState`、localStorage → AsyncStorage アダプタ、history 制御 → ナビゲーション制御、バックグラウンド時のスナップショット隠し(ネイティブなら確実に可能。READMEの既知弱点の解消)
+- 移植完了時に leak-auditor 監査を RN 前提でやり直すこと
+- INFO申し送り: tests/store.test.ts:12-17 のコメントが旧実装の記述のまま(動作影響なし。次に test-guardian が触るとき更新)
+
+## 前作業
+
 **v0.1 リリース後: all-in ショーダウン演出(2026-07-16)**
 
 - store に UI演出専用フィールド `runOutFrom: number | null` を追加(ランアウト発生時に公開済みだったコミュニティカード枚数。カード情報は持たない・persist対象外・merge で明示 null)。`submitAction` で「showdown 直行かつ直前の公開が5枚未満」を検知して設定、startGame/startNextHand のブラインド全員all-in端ケースは 0

@@ -6,7 +6,7 @@ import type {
   GamePhase,
   GameState,
   Player,
-} from '@/types';
+} from './types';
 
 /** プレイヤーの能動アクション（blind/timeout はエンジン側で発生させる） */
 export interface PlayerAction {

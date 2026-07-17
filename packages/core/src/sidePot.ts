@@ -1,5 +1,5 @@
 // sidePot — サイドポット生成（pure function）。SPEC 4.4 を正とする
-import type { Player, Pot } from '@/types';
+import type { Player, Pot } from './types';
 
 function sameIds(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((id, i) => id === b[i]);
