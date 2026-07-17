@@ -223,7 +223,7 @@ export function HandoffFlow({ activePlayer }: { activePlayer: SafePlayer }) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     zIndex: 50,
     backgroundColor: colors.zinc950,
   },

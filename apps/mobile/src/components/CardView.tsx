@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   cornerText: { fontWeight: '700', lineHeight: undefined },
   centerWrap: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
