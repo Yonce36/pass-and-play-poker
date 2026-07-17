@@ -1,0 +1,17 @@
+# expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# native builds (CNG: ネイティブプロジェクトは生成物として扱う)
+ios/
+android/
+
+# misc
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision

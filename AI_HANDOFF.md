@@ -2,7 +2,25 @@
 
 ## 現在のPhaseと完了内容
 
-**Expo移管 Phase M1: pnpm ワークスペース化 + core 切り出し(2026-07-17)**
+**Expo移管 Phase M2: Expo アプリ骨組み+全画面 1:1 移植(2026-07-17)**
+
+- `apps/mobile`(@pass-and-play/mobile、Expo SDK 57 / RN 0.86 / blank-typescript)を新設。pnpm workspace に `apps/*` 追加。ナビゲーションライブラリなし(Web版と同じ phase スイッチの単一画面構成)
+- 全画面を StyleSheet で 1:1 移植: SetupScreen / TableScreen / ActionPanel(スライダーは @react-native-community/slider)/ HandoffFlow(全ステップ)/ HandCompleteScreen(all-in 段階ランアウト演出含む)/ GameOverScreen(GameOverFlow 含む)/ CardView 一式。アニメーションは意図的に未実装(リッチ化フェーズで Reanimated 予定)
+- Web API 置き換え: HandoffGuard → `AppState`(active 以外で lock)+ **expo-screen-capture で常時キャプチャ禁止**(Android FLAG_SECURE)/ storage → AsyncStorage 注入(`apps/mobile/src/store.ts`、core の createGameStore に注入するだけ)/ history 制御 → reveal 中の Android BackHandler(back→lock)
+- leak-auditor 指摘対応済み: W-1(expo-screen-capture 導入)/ W-3(AsyncStorage 非同期 hydration 完了まで画面を描画しないゲート。App.tsx)/ I-1(SwipeReveal の revealCards 多重発火ガード)
+- 検証: mobile tsc / `expo export --platform ios`(Metro バンドル成功、coreパッケージ解決確認)/ Web側 テスト120件・tsc・build 無影響 / **leak-auditor 監査パス(RN前提、CRITICAL 0)**
+- 残WARN: W-2「iOS アプリスイッチャーのスナップショットは inactive→lock の JS 再レンダリング競合に依存(保証なし)」→ 実機検証で確認。NG なら expo-blur 等でネイティブ遮蔽を検討
+
+### 実機検証チェックリスト(ユーザー実施待ち。`cd apps/mobile && pnpm start` → Expo Go)
+
+1. iOS: reveal 中にホームへスワイプ → アプリスイッチャーのスナップショットに手札が写らないか(W-2)
+2. iOS: reveal 中に通知センター/コントロールセンターを引き出したとき locked に落ちるか
+3. Android: reveal 中の Recents サムネイル・スクリーンショットが黒画面か(FLAG_SECURE)
+4. スワイプキル→再起動: locked で復帰し、起動時に SetupScreen が一瞬出ないか(hydration ゲート)
+5. スライダーを素早く最後まで動かしてもクラッシュしないか
+6. ひととおりのハンド進行(fold勝ち / showdown / all-in ランアウト演出 / gameOver)
+
+## 前Phase: Expo移管 Phase M1: pnpm ワークスペース化 + core 切り出し(2026-07-17)
 
 方針(ユーザー承認済み): Expo(React Native)へUIを移管し、リッチグラフィックは移管後に RN 側で実装する。Web版 v0.1 は凍結気味に維持。
 
