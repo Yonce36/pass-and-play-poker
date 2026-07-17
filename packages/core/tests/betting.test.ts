@@ -7,9 +7,9 @@ import {
   isRoundComplete,
   postBlinds,
   shouldAutoRunOut,
-} from '@/core/betting';
-import { createDeck } from '@/core/deck';
-import type { GameConfig, GameState, Player } from '@/types';
+} from '../src/betting';
+import { createDeck } from '../src/deck';
+import type { GameConfig, GameState, Player } from '../src/types';
 
 const CONFIG: GameConfig = {
   smallBlind: 10,
@@ -174,7 +174,7 @@ describe('BBオプション（SPEC 4.2 / STATE_MACHINE 2）', () => {
 
 describe('全員チェック / bet-call（SPEC 7）', () => {
   function huFlop(): GameState {
-    let s = applyAction(headsUpPreflop(), { playerId: 'sb', type: 'call' });
+    const s = applyAction(headsUpPreflop(), { playerId: 'sb', type: 'call' });
     return applyAction(s, { playerId: 'bb', type: 'check' });
   }
 

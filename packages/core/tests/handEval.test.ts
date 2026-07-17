@@ -1,8 +1,8 @@
 // Phase 4: handEval のテスト（SPEC 3.10 / セクション7 準拠、テスト先行）
 // カード表記はスート先行: 'HA' = ハートのA（SPEC 3.1）
 import { describe, expect, it } from 'vitest';
-import { compareScores, evaluateHand } from '@/core/handEval';
-import type { Card } from '@/types';
+import { compareScores, evaluateHand } from '../src/handEval';
+import type { Card } from '../src/types';
 
 const eva = (hole: Card[], community: Card[]) => evaluateHand('p1', hole, community);
 

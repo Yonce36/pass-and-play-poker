@@ -1,7 +1,7 @@
 // deck のテスト — docs/SPEC.md セクション7「deck: 52枚 / 重複なし / 注入乱数で再現可能」
 import { describe, expect, it } from 'vitest';
-import type { Card, Rank, Suit } from '@/types';
-import { createDeck, shuffleDeck } from '@/core/deck';
+import type { Card, Rank, Suit } from '../src/types';
+import { createDeck, shuffleDeck } from '../src/deck';
 
 const SUITS: Suit[] = ['H', 'D', 'C', 'S'];
 const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];

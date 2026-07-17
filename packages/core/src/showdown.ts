@@ -1,6 +1,6 @@
 // showdown — ポット分配（pure function）。SPEC 4.5 を正とする
-import { compareScores } from '@/core/handEval';
-import type { HandResult, Player, Pot } from '@/types';
+import { compareScores } from './handEval';
+import type { HandResult, Player, Pot } from './types';
 
 /** playerId → 獲得チップ額 */
 export type Payouts = Record<string, number>;

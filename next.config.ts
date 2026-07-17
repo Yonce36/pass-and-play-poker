@@ -8,6 +8,9 @@ const withSerwist = withSerwistInit({
   disable: process.env.NODE_ENV === "development",
 });
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  // workspace パッケージ(TSソースのまま参照)をビルド対象に含める
+  transpilePackages: ["@pass-and-play/core"],
+};
 
 export default withSerwist(nextConfig);

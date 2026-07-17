@@ -1,5 +1,5 @@
 // deck — 山札の生成とシャッフル（pure function。乱数は引数注入）
-import type { Card, Rank, Suit } from '@/types';
+import type { Card, Rank, Suit } from './types';
 
 const SUITS: Suit[] = ['H', 'D', 'C', 'S'];
 const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];

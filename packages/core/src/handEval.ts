@@ -1,5 +1,5 @@
 // handEval — 役判定とスコア比較（pure function）
-import type { Card, HandRank, HandResult } from '@/types';
+import type { Card, HandRank, HandResult } from './types';
 
 const RANK_VALUE: Record<string, number> = {
   '2': 2,

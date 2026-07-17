@@ -38,11 +38,11 @@ vi.hoisted(() => {
   });
 });
 
-import { postBlinds } from '@/core/betting';
-import { createDeck, shuffleDeck } from '@/core/deck';
-import { evaluateHand } from '@/core/handEval';
-import { distributePots } from '@/core/showdown';
-import { buildPots } from '@/core/sidePot';
+import { postBlinds } from '@pass-and-play/core';
+import { createDeck, shuffleDeck } from '@pass-and-play/core';
+import { evaluateHand } from '@pass-and-play/core';
+import { distributePots } from '@pass-and-play/core';
+import { buildPots } from '@pass-and-play/core';
 import { selectHandCompleteView, useGameStore } from '@/store/gameStore';
 import type { Card, GameConfig, GameState, Player } from '@/types';
 
