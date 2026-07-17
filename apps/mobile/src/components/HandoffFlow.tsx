@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Slider from '@react-native-community/slider';
 import type { Player } from '@pass-and-play/core';
 import { selectVisibleCards, useGameStore } from '../store';
 import { colors } from '../theme';
@@ -110,12 +109,14 @@ function PinEntryScreen({ target, pinAttempts }: { target: SafePlayer; pinAttemp
   );
 }
 
-/** confirm2: 一方向スライドで reveal へ */
-function SwipeRevealScreen({ target }: { target: SafePlayer }) {
+/**
+ * confirm2: 長押しで reveal へ。
+ * Web版の一方向スライドに相当する「意図的な操作」の担保。ネイティブ Slider は
+ * 実機でクラッシュすることがあったため長押しに置き換えた(ユーザー指示)。
+ */
+function HoldRevealScreen({ target }: { target: SafePlayer }) {
   const revealCards = useGameStore((s) => s.revealCards);
-  const [value, setValue] = useState(0);
-  // Slider の onValueChange は閾値越え後も連続発火し得る。revealCards() は confirm2 以外で
-  // throw するため一度だけ呼ぶ(leak-auditor I-1)
+  // onLongPress の多重発火保険。revealCards() は confirm2 以外で throw するため一度だけ呼ぶ
   const firedRef = useRef(false);
 
   return (
@@ -133,25 +134,18 @@ function SwipeRevealScreen({ target }: { target: SafePlayer }) {
           </Text>
           <Text style={styles.subText}>まわりに見られていないか確認してください</Text>
         </View>
-        <View style={styles.slideBox}>
-          <Text style={styles.slideLabel}>スライドして手札を表示 →</Text>
-          <Slider
-            minimumValue={0}
-            maximumValue={100}
-            step={1}
-            value={value}
-            onValueChange={(v) => {
-              setValue(v);
-              if (v >= 95 && !firedRef.current) {
-                firedRef.current = true;
-                revealCards();
-              }
-            }}
-            minimumTrackTintColor={colors.emerald700}
-            maximumTrackTintColor={colors.zinc700}
-            thumbTintColor={colors.emerald600}
-          />
-        </View>
+        <Pressable
+          delayLongPress={600}
+          onLongPress={() => {
+            if (!firedRef.current) {
+              firedRef.current = true;
+              revealCards();
+            }
+          }}
+          style={({ pressed }) => [styles.holdButton, pressed && styles.holdButtonPressed]}
+        >
+          <Text style={styles.holdButtonText}>長押しして手札を表示</Text>
+        </Pressable>
       </View>
     </Overlay>
   );
@@ -211,7 +205,7 @@ export function HandoffFlow({ activePlayer }: { activePlayer: SafePlayer }) {
     case 'confirm1':
       return target ? <ConfirmIdentityScreen target={target} /> : null;
     case 'confirm2':
-      return target ? <SwipeRevealScreen target={target} /> : null;
+      return target ? <HoldRevealScreen target={target} /> : null;
     case 'pinEntry':
       return target ? <PinEntryScreen target={target} pinAttempts={handoff.pinAttempts} /> : null;
     case 'reveal':
@@ -275,23 +269,18 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     color: '#ffffff',
   },
-  slideBox: {
+  holdButton: {
     width: '100%',
     maxWidth: 320,
-    gap: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.white10,
     backgroundColor: colors.zinc900,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
   },
-  slideLabel: {
-    textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.zinc300,
-  },
+  holdButtonPressed: { backgroundColor: colors.emerald700, borderColor: colors.emerald600 },
+  holdButtonText: { fontSize: 15, fontWeight: '600', color: colors.zinc300 },
   revealContainer: {
     flexGrow: 1,
     alignItems: 'center',

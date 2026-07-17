@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { useGameStore } from '../store';
 import { colors } from '../theme';
 import { ChipAmount } from './CardView';
@@ -13,6 +12,7 @@ import { ChipAmount } from './CardView';
  */
 export function ActionPanel({ viewerId }: { viewerId: string }) {
   const betting = useGameStore((s) => s.betting);
+  const bigBlind = useGameStore((s) => s.config.bigBlind);
   const players = useGameStore((s) => s.players);
   const submitAction = useGameStore((s) => s.submitAction);
   const concealCards = useGameStore((s) => s.concealCards);
@@ -105,16 +105,21 @@ export function ActionPanel({ viewerId }: { viewerId: string }) {
               style={styles.betInput}
             />
           </View>
-          <Slider
-            minimumValue={betting.minRaiseTo}
-            maximumValue={maxReachable}
-            step={1}
-            value={clamp(amount)}
-            onValueChange={(v) => setAmount(Math.round(v))}
-            minimumTrackTintColor={colors.amber300}
-            maximumTrackTintColor={colors.zinc700}
-            thumbTintColor={colors.gold}
-          />
+          {/* ネイティブ Slider は実機でクラッシュすることがあったため BB刻みのステッパーに置き換え */}
+          <View style={styles.stepperRow}>
+            <Pressable
+              onPress={() => setAmount((a) => clamp(a - bigBlind))}
+              style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepperText}>−{bigBlind}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setAmount((a) => clamp(a + bigBlind))}
+              style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
+            >
+              <Text style={styles.stepperText}>＋{bigBlind}</Text>
+            </Pressable>
+          </View>
           <View style={styles.presetRow}>
             <Pressable onPress={() => setAmount(betting.minRaiseTo)} style={styles.preset}>
               <Text style={styles.presetText}>最小 {betting.minRaiseTo}</Text>
@@ -212,6 +217,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontVariant: ['tabular-nums'],
   },
+  stepperRow: { flexDirection: 'row', gap: 8 },
+  stepper: {
+    flex: 1,
+    borderRadius: 8,
+    backgroundColor: colors.zinc800,
+    borderWidth: 1,
+    borderColor: colors.white10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  stepperText: { fontSize: 16, fontWeight: '700', color: colors.amber300 },
   presetRow: { flexDirection: 'row', gap: 8 },
   preset: {
     flex: 1,
