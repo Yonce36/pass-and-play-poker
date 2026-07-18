@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGameStore } from '../store';
+import { haptics } from '../haptics';
 import { colors } from '../theme';
 import { ChipAmount } from './CardView';
 
@@ -8,6 +10,11 @@ export function GameOverScreen() {
   const resetToSetup = useGameStore((s) => s.resetToSetup);
 
   const winner = players.find((p) => p.status !== 'busted' && p.status !== 'sittingOut');
+
+  // チャンピオン決定の祝祭触覚(画面表示時に一度)
+  useEffect(() => {
+    haptics.win();
+  }, []);
 
   return (
     <View style={styles.container}>

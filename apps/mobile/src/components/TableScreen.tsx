@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { Player } from '@pass-and-play/core';
 import { useGameStore } from '../store';
-import { colors } from '../theme';
+import { colors, gradients } from '../theme';
 import { CardBack, CardSlot, CardView, ChipAmount } from './CardView';
 import { HandoffFlow } from './HandoffFlow';
+import { TurnGlow } from './TurnGlow';
 
 const STREET_LABEL: Record<string, string> = {
   postingBlinds: 'ブラインド',
@@ -85,6 +87,7 @@ function Seat({
         )}
       </View>
 
+      {isActive && <TurnGlow borderRadius={16} />}
       {isActive && (
         <View style={styles.turnBadge}>
           <Text style={styles.turnBadgeText}>手番</Text>
@@ -125,8 +128,13 @@ export function TableScreen() {
         ))}
       </View>
 
-      {/* テーブル(フェルト) */}
-      <View style={styles.felt}>
+      {/* テーブル(フェルト。左上から照明が当たる緑ラシャのグラデーション) */}
+      <LinearGradient
+        colors={gradients.felt}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={styles.felt}
+      >
         <Text style={styles.feltLabel}>
           第{handNumber}ハンド ・ {STREET_LABEL[phase] ?? phase}
         </Text>
@@ -144,7 +152,7 @@ export function TableScreen() {
           <Text style={styles.potLabel}>ポット </Text>
           <ChipAmount amount={potCollected} color={colors.emerald100} />
         </View>
-      </View>
+      </LinearGradient>
 
       {/* 自分側(seatIndex最小)の席 */}
       {heroSeat && (
@@ -218,7 +226,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     borderWidth: 6,
     borderColor: colors.rail,
-    backgroundColor: colors.felt,
+    overflow: 'hidden',
     paddingHorizontal: 16,
     paddingVertical: 24,
   },

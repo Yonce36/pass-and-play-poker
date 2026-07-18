@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { selectHandCompleteView, useGameStore } from '../store';
-import { colors } from '../theme';
+import { haptics } from '../haptics';
+import { colors, gradients } from '../theme';
 import { CardSlot, CardView, ChipAmount } from './CardView';
 
 const RANK_LABEL: Record<string, string> = {
@@ -39,10 +41,18 @@ export function HandCompleteScreen({
   useEffect(() => {
     if (revealedCount >= 5) return;
     // フロップは3枚同時、以降は1枚ずつ(endStreet のストリート単位公開と同じ刻み)
-    const timer = setTimeout(() => setRevealedCount((n) => (n < 3 ? 3 : n + 1)), 1100);
+    const timer = setTimeout(() => {
+      haptics.flip();
+      setRevealedCount((n) => (n < 3 ? 3 : n + 1));
+    }, 1100);
     return () => clearTimeout(timer);
   }, [revealedCount]);
   const done = revealedCount >= 5;
+
+  // 勝敗確定の祝祭触覚(ランアウトのめくり終わり、または画面表示の瞬間)
+  useEffect(() => {
+    if (done) haptics.win();
+  }, [done]);
 
   const winners = view.entries.filter((e) => e.amount > 0);
   const winnerLabel = winners.map((w) => w.name).join(' / ');
@@ -73,7 +83,12 @@ export function HandCompleteScreen({
 
       {/* コミュニティカード(showdown時のみ意味がある) */}
       {view.isShowdown && (
-        <View style={styles.board}>
+        <LinearGradient
+          colors={gradients.felt}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.board}
+        >
           <Text style={styles.boardLabel}>ボード</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {state.communityCards.slice(0, revealedCount).map((c) => (
@@ -83,7 +98,7 @@ export function HandCompleteScreen({
               <CardSlot key={`slot-${i}`} size="sm" />
             ))}
           </View>
-        </View>
+        </LinearGradient>
       )}
 
       <View style={styles.entries}>
@@ -142,7 +157,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     borderWidth: 4,
     borderColor: colors.rail,
-    backgroundColor: colors.felt,
+    overflow: 'hidden',
     paddingHorizontal: 20,
     paddingVertical: 16,
   },

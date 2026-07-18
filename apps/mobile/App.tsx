@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from './src/store';
-import { colors } from './src/theme';
+import { gradients } from './src/theme';
 import { HandoffGuard } from './src/components/HandoffGuard';
 import { SetupScreen } from './src/components/SetupScreen';
 import { TableScreen } from './src/components/TableScreen';
@@ -54,15 +55,17 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.root}>
-        <StatusBar style="light" />
-        <HandoffGuard />
-        {hydrated && <Screen />}
-      </SafeAreaView>
+      <LinearGradient colors={gradients.screen} style={styles.root}>
+        <SafeAreaView style={styles.root}>
+          <StatusBar style="light" />
+          <HandoffGuard />
+          {hydrated && <Screen />}
+        </SafeAreaView>
+      </LinearGradient>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1 },
 });

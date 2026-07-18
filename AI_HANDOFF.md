@@ -2,7 +2,29 @@
 
 ## 現在のPhaseと完了内容
 
-**Expo移管 M2後: 実機フィードバック修正(2026-07-17、コミット済み・ツリークリーン)**
+**Phase M3-A 完了: カジノの手ざわりと視覚フィードバック(2026-07-18)**
+
+docs/poker_experience_improvement.md のロードマップ第1段。ロジック変更なし(意図)。
+
+- `src/haptics.ts`(新規): expo-haptics のセマンティックラッパー。**触感の割り当てはこのファイルだけで調整可能**(tick/receive/light/confirm/reveal/allIn/flip/win/error)
+- 配線: 受け取り=Medium / 本人確認=Light / 長押しリビール=pressInでtick・発火でMedium / PIN成否で reveal/error 分岐 / fold・check=Light / call・bet・raise=Medium / **オールイン=Heavy+Warning二段** / ステッパー・プリセット=Selection / ランアウトめくり=Light / 勝者・チャンピオン=Success / バリデーションエラー=Error
+- `src/components/TurnGlow.tsx`(新規): 手番席のゴールド呼吸グロー(Reanimated 4、900ms周期)
+- 質感: expo-linear-gradient で フェルト(左上照明の緑ラシャ)/ カード裏面 / 画面背景 をグラデーション化(`theme.ts` の `gradients` に集約)
+- 検証: mobile tsc / `expo export`(937モジュール、Metroバンドル成功)/ Webテスト120件無影響 / **leak-auditor 監査パス(CRITICAL 0・WARN 0)**
+- 次: **ユーザー実機評価(感触ラウンド1)** → フィードバック反映 → M3-B(3Dフリップ・リバーのタメ・チップ飛翔)
+
+### 実機検証チェックリスト(M2分と統合。`cd apps/mobile && pnpm start` → Expo Go)
+
+A. M3-A 新規(感触):
+1. 各操作の振動の強さ・気持ちよさ(受け取り/長押し/アクション確定/オールイン/勝者)— 調整要望は haptics.ts の対応表単位で指示可能
+2. フェルト・カード裏・背景の質感(安っぽくないか)
+3. 手番席のゴールドパルスの速さ・強さ
+B. M2 持ち越し(セキュリティ):
+4. iOS: reveal 中にホームへスワイプ → アプリスイッチャーのスナップショットに手札が写らないか(W-2)
+5. スワイプキル→再起動: locked で復帰するか
+6. ひととおりのハンド進行(fold勝ち / showdown / all-in ランアウト / gameOver)
+
+## 前作業: Expo移管 M2後: 実機フィードバック修正(2026-07-17、コミット済み)
 
 - `8198594`/`f26c1e7`: Expo SDK を **54** へダウングレード(App Store 配布版 Expo Go が対応する版に合わせる)
 - `4f4f309`: pnpm モノレポで React が二重解決されるのを Metro resolver で単一化(Invalid hook call 対策)

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Player } from '@pass-and-play/core';
 import { selectVisibleCards, useGameStore } from '../store';
+import { haptics } from '../haptics';
 import { colors } from '../theme';
 import { CardBack, CardView } from './CardView';
 import { ActionPanel } from './ActionPanel';
@@ -29,7 +30,10 @@ function PassScreen({ target }: { target: SafePlayer }) {
         端末を <Text style={styles.goldBold}>{target.name}</Text> さんに渡してください
       </Text>
       <Pressable
-        onPress={() => beginHandoff(target.id)}
+        onPress={() => {
+          haptics.receive();
+          beginHandoff(target.id);
+        }}
         style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
       >
         <Text style={styles.primaryButtonText}>{target.name} です — 受け取りました</Text>
@@ -55,7 +59,10 @@ function ConfirmIdentityScreen({ target }: { target: SafePlayer }) {
           あなたは <Text style={styles.goldBold}>{target.name}</Text> さんですか？
         </Text>
         <Pressable
-          onPress={confirmIdentity}
+          onPress={() => {
+            haptics.light();
+            confirmIdentity();
+          }}
           style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
         >
           <Text style={styles.primaryButtonText}>はい、{target.name} です</Text>
@@ -92,6 +99,9 @@ function PinEntryScreen({ target, pinAttempts }: { target: SafePlayer; pinAttemp
           onPress={() => {
             submitPin(pin);
             setPin('');
+            // PIN照合はstore内で同期に完了する。結果に応じた触覚を返す
+            if (useGameStore.getState().handoff.step === 'reveal') haptics.reveal();
+            else haptics.error();
           }}
           style={({ pressed }) => [
             styles.primaryButton,
@@ -136,9 +146,11 @@ function HoldRevealScreen({ target }: { target: SafePlayer }) {
         </View>
         <Pressable
           delayLongPress={600}
+          onPressIn={haptics.tick}
           onLongPress={() => {
             if (!firedRef.current) {
               firedRef.current = true;
+              haptics.reveal();
               revealCards();
             }
           }}

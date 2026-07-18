@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { Card } from '@pass-and-play/core';
-import { colors } from '../theme';
+import { colors, gradients } from '../theme';
 
 const SUIT_SYMBOL: Record<string, string> = { H: '♥', D: '♦', C: '♣', S: '♠' };
 const RED_SUITS = new Set(['H', 'D']);
@@ -69,11 +70,16 @@ export function CardView({
 export function CardBack({ size = 'md' }: { size?: CardSize }) {
   const s = SIZE[size];
   return (
-    <View style={[styles.back, { height: s.h, width: s.w, borderRadius: s.r }]}>
+    <LinearGradient
+      colors={gradients.cardBack}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.back, { height: s.h, width: s.w, borderRadius: s.r }]}
+    >
       <View style={styles.backInner}>
         <Text style={styles.backSuit}>♠</Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -122,7 +128,6 @@ const styles = StyleSheet.create({
   },
   bottomCorner: { transform: [{ rotate: '180deg' }] },
   back: {
-    backgroundColor: '#1e3a8a',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',

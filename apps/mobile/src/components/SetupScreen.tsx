@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { GameConfig } from '@pass-and-play/core';
 import { useGameStore, validateGameConfig } from '../store';
+import { haptics } from '../haptics';
 import { colors } from '../theme';
 import { CardBack } from './CardView';
 
@@ -55,8 +56,10 @@ export function SetupScreen() {
         oddChipRule: 'clockwiseFromButton',
       });
       startGame([name1.trim() || 'プレイヤー1', name2.trim() || 'プレイヤー2'], configOverrides);
+      haptics.confirm();
       setError(null);
     } catch (err) {
+      haptics.error();
       setError(err instanceof Error ? err.message : String(err));
     }
   };

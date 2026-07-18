@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useGameStore } from '../store';
+import { haptics } from '../haptics';
 import { colors } from '../theme';
 import { ChipAmount } from './CardView';
 
@@ -42,11 +43,22 @@ export function ActionPanel({ viewerId }: { viewerId: string }) {
   ) => {
     try {
       submitAction({ playerId: viewer.id, type, amount: actionAmount });
+      // 成功時のみアクションに応じた触覚(不正アクションでの確定振動を避ける)
+      if (type === 'allIn') haptics.allIn();
+      else if (type === 'fold' || type === 'check') haptics.light();
+      else haptics.confirm();
       setError(null);
       concealCards();
     } catch (e) {
+      haptics.error();
       setError(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  /** ステッパー・プリセットの額変更(チップを触るカリッという選択触覚つき) */
+  const setAmountWithTick = (v: number) => {
+    haptics.tick();
+    setAmount(v);
   };
 
   return (
@@ -108,26 +120,26 @@ export function ActionPanel({ viewerId }: { viewerId: string }) {
           {/* ネイティブ Slider は実機でクラッシュすることがあったため BB刻みのステッパーに置き換え */}
           <View style={styles.stepperRow}>
             <Pressable
-              onPress={() => setAmount((a) => clamp(a - bigBlind))}
+              onPress={() => setAmountWithTick(clamp(amount - bigBlind))}
               style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
             >
               <Text style={styles.stepperText}>−{bigBlind}</Text>
             </Pressable>
             <Pressable
-              onPress={() => setAmount((a) => clamp(a + bigBlind))}
+              onPress={() => setAmountWithTick(clamp(amount + bigBlind))}
               style={({ pressed }) => [styles.stepper, pressed && styles.pressed]}
             >
               <Text style={styles.stepperText}>＋{bigBlind}</Text>
             </Pressable>
           </View>
           <View style={styles.presetRow}>
-            <Pressable onPress={() => setAmount(betting.minRaiseTo)} style={styles.preset}>
+            <Pressable onPress={() => setAmountWithTick(betting.minRaiseTo)} style={styles.preset}>
               <Text style={styles.presetText}>最小 {betting.minRaiseTo}</Text>
             </Pressable>
-            <Pressable onPress={() => setAmount(potBet)} style={styles.preset}>
+            <Pressable onPress={() => setAmountWithTick(potBet)} style={styles.preset}>
               <Text style={styles.presetText}>ポット</Text>
             </Pressable>
-            <Pressable onPress={() => setAmount(maxReachable)} style={styles.preset}>
+            <Pressable onPress={() => setAmountWithTick(maxReachable)} style={styles.preset}>
               <Text style={styles.presetText}>最大</Text>
             </Pressable>
           </View>

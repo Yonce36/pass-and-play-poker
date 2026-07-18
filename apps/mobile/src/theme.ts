@@ -26,3 +26,16 @@ export const colors = {
   white10: 'rgba(255,255,255,0.1)',
   white20: 'rgba(255,255,255,0.2)',
 } as const;
+
+// expo-linear-gradient 用のグラデーション定義(M3-A: 質感向上)。
+// 3値タプルは [明るい側, 基調, 影側]
+export const gradients = {
+  /** 画面全体の背景(上部がわずかに温かく明るい) */
+  screen: ['#1c1917', '#0c0a09', '#09090b'] as const,
+  /** フェルト(左上に照明が当たる緑ラシャ) */
+  felt: ['#1d7a44', '#14532d', '#0d3b1f'] as const,
+  /** カード裏面(青の深み) */
+  cardBack: ['#2749c4', '#1e3a8a', '#14204f'] as const,
+  /** 席・パネルの下地(ごく僅かな立体感) */
+  panel: ['#1f1f23', '#18181b'] as const,
+} as const;
