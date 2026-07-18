@@ -1,5 +1,26 @@
 # AI_HANDOFF.md
 
+## ⚠️ メイン開発の移管について(2026-07-18、ユーザー決定)
+
+メイン開発エージェントを Grok に移管する。新しいメインエージェントは着手前に必ずこの順で読むこと:
+
+1. `CLAUDE.md` — 絶対ルール(特に**手札漏洩防止**と「テストを通すためのテスト改変禁止」。エージェントが何であれ適用される契約)
+2. `docs/SPEC.md` / `docs/STATE_MACHINE.md` — ルール・データモデル・状態遷移の正
+3. 本ファイルの以下 — 現在地と次のタスク
+
+### 移管後の監査体制(重要)
+
+従来の監査サブエージェント(rules-auditor / leak-auditor / test-guardian)は Claude Code 環境の仕組みのため、移管後は次のいずれかで代替する:
+
+- **推奨**: 各フェーズ完了時に Claude Code セッションへ「独立レビュー」を依頼する(コミット前。これまで出荷前に CRITICAL 5件を検出してきた工程)
+- 代替: `.claude/agents/rules-auditor.md` / `leak-auditor.md` / `test-guardian.md` のチェックリストをセルフ監査として実施し、結果を本ファイルに記録する
+
+### 変更してはいけないもの(人間の承認が必要)
+
+- `packages/core` のロジックとテストの期待値(SPEC 確定仕様。テスト120件は仕様の写し)
+- persist name `'pass-and-play-poker'`(変えると既存ユーザーのセーブが消える)
+- 手札漏洩防止の実装(selectVisibleCards 経由のみ / SafePlayer props / AppState lock / FLAG_SECURE / hydration ゲート)。触れる変更をしたら必ず監査(上記)を通す
+
 ## 現在のPhaseと完了内容
 
 **Phase M3-A 完了: カジノの手ざわりと視覚フィードバック(2026-07-18)**
