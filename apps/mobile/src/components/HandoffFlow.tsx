@@ -4,7 +4,8 @@ import type { Player } from '@pass-and-play/core';
 import { selectVisibleCards, useGameStore } from '../store';
 import { haptics } from '../haptics';
 import { colors } from '../theme';
-import { CardBack, CardView } from './CardView';
+import { CardBack } from './CardView';
+import { FlipCard } from './FlipCard';
 import { ActionPanel } from './ActionPanel';
 
 /**
@@ -188,7 +189,9 @@ function RevealScreen({ viewer }: { viewer: SafePlayer }) {
           <Text style={styles.goldBold}>{viewer.name}</Text> さんの手札
         </Text>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          {cards?.map((c) => <CardView key={c} card={c} size="lg" />)}
+          {cards?.map((c, i) => (
+            <FlipCard key={c} card={c} size="lg" delay={i * 130} duration={380} />
+          ))}
         </View>
         <ActionPanel viewerId={viewer.id} />
         <Pressable onPress={concealCards} style={{ marginTop: 8 }}>

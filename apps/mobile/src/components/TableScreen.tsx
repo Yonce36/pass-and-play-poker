@@ -1,11 +1,42 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import type { Player } from '@pass-and-play/core';
 import { useGameStore } from '../store';
 import { colors, gradients } from '../theme';
 import { CardBack, CardSlot, CardView, ChipAmount } from './CardView';
 import { HandoffFlow } from './HandoffFlow';
 import { TurnGlow } from './TurnGlow';
+
+type Point = { x: number; y: number };
+
+/**
+ * ベット確定時に席からポットへ飛ぶチップ(M3-B。純装飾)。
+ * 金額情報は持たず、座標はレイアウト計測値のみ。飛び終わると親が破棄する。
+ */
+function FlyingChip({ from, to, delay }: { from: Point; to: Point; delay: number }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withDelay(delay, withTiming(1, { duration: 480, easing: Easing.in(Easing.quad) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => ({
+    opacity: p.value < 0.9 ? 1 : (1 - p.value) * 10,
+    transform: [
+      { translateX: from.x + (to.x - from.x) * p.value },
+      { translateY: from.y + (to.y - from.y) * p.value },
+      { scale: 1 - 0.25 * p.value },
+    ],
+  }));
+  return <Animated.View style={[styles.flyingChip, style]} />;
+}
 
 const STREET_LABEL: Record<string, string> = {
   postingBlinds: 'ブラインド',
@@ -114,19 +145,63 @@ export function TableScreen() {
   // 「ポット」は回収済み分。現ストリートのベットは各席の前に表示する
   const potCollected = totalContribution - currentBets;
 
+  // ===== チップ飛翔(M3-B): currentBet の増加を検知して席→ポットへ飛ばす =====
+  const [flights, setFlights] = useState<
+    { id: number; from: Point; to: Point; delay: number }[]
+  >([]);
+  const layoutRef = useRef<{ seats: Record<string, Point>; pot: Point | null }>({
+    seats: {},
+    pot: null,
+  });
+  const prevBetsRef = useRef<Record<string, number> | null>(null);
+  const flightIdRef = useRef(0);
+
+  useEffect(() => {
+    const prev = prevBetsRef.current;
+    const next: Record<string, number> = {};
+    for (const p of players) next[p.id] = p.currentBet;
+    // 初回(マウント/復元直後)は記録のみで発火しない
+    if (prev) {
+      const spawned: { id: number; from: Point; to: Point; delay: number }[] = [];
+      for (const p of players) {
+        const from = layoutRef.current.seats[p.id];
+        const to = layoutRef.current.pot;
+        if (from && to && p.currentBet > (prev[p.id] ?? 0)) {
+          for (let i = 0; i < 3; i++) {
+            spawned.push({ id: flightIdRef.current++, from, to, delay: i * 70 });
+          }
+        }
+      }
+      if (spawned.length > 0) {
+        setFlights((f) => [...f, ...spawned]);
+        const ids = new Set(spawned.map((s) => s.id));
+        setTimeout(() => setFlights((f) => f.filter((fl) => !ids.has(fl.id))), 900);
+      }
+    }
+    prevBetsRef.current = next;
+  }, [players]);
+
+  const onSeatLayout = (playerId: string) => (e: LayoutChangeEvent) => {
+    const { x, y, width, height } = e.nativeEvent.layout;
+    layoutRef.current.seats[playerId] = { x: x + width / 2, y: y + height / 2 };
+  };
+  const onFeltLayout = (e: LayoutChangeEvent) => {
+    const { x, y, width, height } = e.nativeEvent.layout;
+    layoutRef.current.pot = { x: x + width / 2, y: y + height / 2 };
+  };
+
   return (
     <View style={styles.container}>
-      {/* 相手側の席(将来の3人以上にも対応) */}
-      <View style={{ gap: 8 }}>
-        {otherSeats.map((p) => (
+      {/* 相手側の席(将来の3人以上にも対応)。onLayout はコンテナ直下でチップ飛翔の座標を取る */}
+      {otherSeats.map((p) => (
+        <View key={p.id} onLayout={onSeatLayout(p.id)}>
           <Seat
-            key={p.id}
             player={toSeatPlayer(p)}
             isActive={p.id === activePlayerId}
             isButton={p.id === dealerButtonPlayerId}
           />
-        ))}
-      </View>
+        </View>
+      ))}
 
       {/* テーブル(フェルト。左上から照明が当たる緑ラシャのグラデーション) */}
       <LinearGradient
@@ -134,6 +209,7 @@ export function TableScreen() {
         start={{ x: 0.1, y: 0 }}
         end={{ x: 0.9, y: 1 }}
         style={styles.felt}
+        onLayout={onFeltLayout}
       >
         <Text style={styles.feltLabel}>
           第{handNumber}ハンド ・ {STREET_LABEL[phase] ?? phase}
@@ -156,11 +232,22 @@ export function TableScreen() {
 
       {/* 自分側(seatIndex最小)の席 */}
       {heroSeat && (
-        <Seat
-          player={toSeatPlayer(heroSeat)}
-          isActive={heroSeat.id === activePlayerId}
-          isButton={heroSeat.id === dealerButtonPlayerId}
-        />
+        <View onLayout={onSeatLayout(heroSeat.id)}>
+          <Seat
+            player={toSeatPlayer(heroSeat)}
+            isActive={heroSeat.id === activePlayerId}
+            isButton={heroSeat.id === dealerButtonPlayerId}
+          />
+        </View>
+      )}
+
+      {/* チップ飛翔のオーバーレイ(タッチ透過・情報なし) */}
+      {flights.length > 0 && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          {flights.map((f) => (
+            <FlyingChip key={f.id} from={f.from} to={f.to} delay={f.delay} />
+          ))}
+        </View>
       )}
 
       {/* cards を含む Player を props に流さない(STATE_MACHINE 4 不変条件) */}
@@ -245,4 +332,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   potLabel: { fontSize: 14, color: 'rgba(167,243,208,0.7)' },
+  flyingChip: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    height: 16,
+    width: 16,
+    borderRadius: 8,
+    borderWidth: 2.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: colors.rose600,
+  },
 });

@@ -10,13 +10,17 @@ function formatRank(rank: string): string {
   return rank === 'T' ? '10' : rank;
 }
 
-type CardSize = 'sm' | 'md' | 'lg';
+export type CardSize = 'sm' | 'md' | 'lg';
 
-const SIZE: Record<CardSize, { h: number; w: number; r: number; corner: number; center: number }> = {
+export const CARD_SIZE: Record<
+  CardSize,
+  { h: number; w: number; r: number; corner: number; center: number }
+> = {
   sm: { h: 56, w: 40, r: 6, corner: 11, center: 18 },
   md: { h: 72, w: 52, r: 8, corner: 14, center: 24 },
   lg: { h: 96, w: 68, r: 8, corner: 16, center: 36 },
 };
+const SIZE = CARD_SIZE;
 
 /**
  * 1枚の表向きカード。呼び出し側が「表示してよい手札/公開カード」であることを保証すること。

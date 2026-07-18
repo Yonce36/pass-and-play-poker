@@ -1,10 +1,62 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { selectHandCompleteView, useGameStore } from '../store';
 import { haptics } from '../haptics';
 import { colors, gradients } from '../theme';
 import { CardSlot, CardView, ChipAmount } from './CardView';
+import { FlipCard } from './FlipCard';
+
+/** 勝者行に降り注ぐチップバースト(純装飾。M3-B: 勝者へのチップ吸い込み) */
+function ChipBurst() {
+  const offsets = [-70, -25, 20, 65, -48, 42];
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+      {offsets.map((x, i) => (
+        <BurstChip key={i} offsetX={x} delay={i * 80} />
+      ))}
+    </View>
+  );
+}
+
+function BurstChip({ offsetX, delay }: { offsetX: number; delay: number }) {
+  // 0→1: 上から勝者行へ落下、1→1.4: 着地後にフェードアウト
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(1, { duration: 480, easing: Easing.in(Easing.quad) }),
+        withTiming(1.4, { duration: 320 }),
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => {
+    const fly = Math.min(p.value, 1);
+    return {
+      opacity: p.value <= 1 ? Math.min(fly * 5, 1) : 1.4 - p.value < 0.4 ? (1.4 - p.value) * 2.5 : 1,
+      transform: [
+        { translateY: -170 * (1 - fly) },
+        { translateX: offsetX * (1 - fly) },
+        { rotate: `${(1 - fly) * 200}deg` },
+      ],
+    };
+  });
+  return (
+    <View style={styles.burstAnchor}>
+      <Animated.View style={[styles.burstChip, style]} />
+    </View>
+  );
+}
 
 const RANK_LABEL: Record<string, string> = {
   highCard: 'ハイカード',
@@ -40,11 +92,17 @@ export function HandCompleteScreen({
   const [revealedCount, setRevealedCount] = useState(runOutFrom ?? 5);
   useEffect(() => {
     if (revealedCount >= 5) return;
-    // フロップは3枚同時、以降は1枚ずつ(endStreet のストリート単位公開と同じ刻み)
-    const timer = setTimeout(() => {
-      haptics.flip();
-      setRevealedCount((n) => (n < 3 ? 3 : n + 1));
-    }, 1100);
+    // フロップは3枚同時、以降は1枚ずつ(endStreet のストリート単位公開と同じ刻み)。
+    // 勝負決定札のリバー(5枚目)の直前だけ通常1100msに+600msの「タメ」を挟む(M3-B)
+    const isRiverNext = revealedCount === 4;
+    const timer = setTimeout(
+      () => {
+        if (isRiverNext) haptics.reveal();
+        else haptics.flip();
+        setRevealedCount((n) => (n < 3 ? 3 : n + 1));
+      },
+      isRiverNext ? 1700 : 1100,
+    );
     return () => clearTimeout(timer);
   }, [revealedCount]);
   const done = revealedCount >= 5;
@@ -91,9 +149,23 @@ export function HandCompleteScreen({
         >
           <Text style={styles.boardLabel}>ボード</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            {state.communityCards.slice(0, revealedCount).map((c) => (
-              <CardView key={c} card={c} size="sm" />
-            ))}
+            {state.communityCards.slice(0, revealedCount).map((c, i) =>
+              runOutFrom !== null && i >= runOutFrom ? (
+                // ランアウトで公開された分は裏→表の3Dフリップ。フロップは3枚が連続でめくれ、
+                // リバー(5枚目)はゆっくりドラマチックにめくる
+                // stagger はマウント時のバッチ(フロップ=3枚/ターン・リバー=1枚)内の相対位置。
+                // マウント済みカードは delay が変わっても再アニメーションしない
+                <FlipCard
+                  key={c}
+                  card={c}
+                  size="sm"
+                  delay={Math.max(0, i - (revealedCount === 3 ? runOutFrom : revealedCount - 1)) * 150}
+                  duration={i === 4 ? 700 : 420}
+                />
+              ) : (
+                <CardView key={c} card={c} size="sm" />
+              ),
+            )}
             {Array.from({ length: 5 - revealedCount }).map((_, i) => (
               <CardSlot key={`slot-${i}`} size="sm" />
             ))}
@@ -107,6 +179,7 @@ export function HandCompleteScreen({
           const best = new Set(entry.bestFiveCards ?? []);
           return (
             <View key={entry.playerId} style={[styles.entry, won && styles.entryWon]}>
+              {won && <ChipBurst />}
               <View style={styles.entryHeader}>
                 <Text style={styles.entryName}>{entry.name}</Text>
                 {won && <ChipAmount amount={entry.amount} color={colors.gold} />}
@@ -114,9 +187,20 @@ export function HandCompleteScreen({
               {entry.cards && entry.handRank ? (
                 <View style={styles.entryCards}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {entry.cards.map((c) => (
-                      <CardView key={c} card={c} size="sm" dimmed={done && !best.has(c)} />
-                    ))}
+                    {entry.cards.map((c, idx) =>
+                      runOutFrom !== null ? (
+                        // all-in showdown: 手札もめくって公開する
+                        <FlipCard
+                          key={c}
+                          card={c}
+                          size="sm"
+                          delay={idx * 140}
+                          dimmed={done && !best.has(c)}
+                        />
+                      ) : (
+                        <CardView key={c} card={c} size="sm" dimmed={done && !best.has(c)} />
+                      ),
+                    )}
                   </View>
                   {done && (
                     <View style={[styles.rankBadge, won && { backgroundColor: colors.gold }]}>
@@ -194,4 +278,18 @@ const styles = StyleSheet.create({
   },
   nextButtonText: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  burstAnchor: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  burstChip: {
+    height: 16,
+    width: 16,
+    borderRadius: 8,
+    borderWidth: 2.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: colors.gold,
+  },
 });

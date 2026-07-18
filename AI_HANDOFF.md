@@ -11,7 +11,16 @@ docs/poker_experience_improvement.md のロードマップ第1段。ロジック
 - `src/components/TurnGlow.tsx`(新規): 手番席のゴールド呼吸グロー(Reanimated 4、900ms周期)
 - 質感: expo-linear-gradient で フェルト(左上照明の緑ラシャ)/ カード裏面 / 画面背景 をグラデーション化(`theme.ts` の `gradients` に集約)
 - 検証: mobile tsc / `expo export`(937モジュール、Metroバンドル成功)/ Webテスト120件無影響 / **leak-auditor 監査パス(CRITICAL 0・WARN 0)**
-- 次: **ユーザー実機評価(感触ラウンド1)** → フィードバック反映 → M3-B(3Dフリップ・リバーのタメ・チップ飛翔)
+
+**Phase M3-B 完了: 3Dフリップとショーダウン演出(2026-07-18、同日続けて実装)**
+
+- `src/components/FlipCard.tsx`(新規): マウント時に裏→表の3Dフリップ(Reanimated、90度でopacity切替=Android backface差異回避)。**カード値は公開の瞬間にのみツリーへ入る契約**(コメント明記。使用箇所追加時は再監査)
+- ランアウト演出: ボードをFlipCard化(フロップ3枚は150ms間隔の連続めくり、**リバーは+600msのタメ+700msスローフリップ+Medium触覚**)。all-in時の手札もフリップ公開
+- reveal画面の手札もフリップイン(130ms stagger)
+- チップ飛翔: TableScreen で currentBet 増加を検知し、**席→ポットへチップ3枚が飛ぶ**(onLayoutの座標計測。金額情報なし・初回/復元時は発火しない)。ブラインドポストでも飛ぶ
+- 勝者演出: 勝者行に ChipBurst(上からチップ6枚が降り注ぐ純装飾)
+- 検証: mobile tsc / expo export(938モジュール)/ Webテスト120件無影響 / **leak-auditor 監査パス(CRITICAL 0。WARN 1=コメント不一致は修正済み)**
+- 次: **ユーザー実機評価(M3-A/B まとめて感触ラウンド1)** → フィードバック反映 → M3-C(ピールジェスチャー・タイマーUI・PIN設定UI)
 
 ### 実機検証チェックリスト(M2分と統合。`cd apps/mobile && pnpm start` → Expo Go)
 
