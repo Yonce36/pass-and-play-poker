@@ -23,17 +23,19 @@ const CENTER_SUIT_CLASS: Record<CardSize, string> = {
 
 /**
  * 1枚の表向きカード。呼び出し側が「表示してよい手札/公開カード」であることを保証すること。
- * dimmed はショーダウンで役に使われなかったカードの減光表示。
+ * highlighted = 役に使用 / dimmed = 未使用の軽い減光(カード単位のみ)
  */
 export function CardView({
   card,
   size = 'md',
   dimmed = false,
+  highlighted = false,
   animate = false,
 }: {
   card: Card;
   size?: CardSize;
   dimmed?: boolean;
+  highlighted?: boolean;
   animate?: boolean;
 }) {
   const suit = card[0];
@@ -43,8 +45,8 @@ export function CardView({
   return (
     <div
       className={`relative flex flex-col justify-between bg-white p-1 font-bold shadow-md shadow-black/40 ring-1 ring-black/10 ${SIZE_CLASS[size]} ${color} ${
-        dimmed ? 'opacity-35 saturate-50' : ''
-      } ${animate ? 'animate-card-in' : ''}`}
+        dimmed ? 'opacity-55' : ''
+      } ${highlighted ? 'ring-2 ring-gold shadow-gold/40' : ''} ${animate ? 'animate-card-in' : ''}`}
     >
       <div className="leading-none">
         <div>{rank}</div>

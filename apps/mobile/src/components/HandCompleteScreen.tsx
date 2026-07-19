@@ -16,6 +16,18 @@ import { CardSlot, CardView, ChipAmount } from './CardView';
 import { FlipCard } from './FlipCard';
 import { GameOverScreen } from './GameOverScreen';
 
+const RANK_LABEL: Record<string, string> = {
+  highCard: 'ハイカード',
+  onePair: 'ワンペア',
+  twoPair: 'ツーペア',
+  threeOfAKind: 'スリーカード',
+  straight: 'ストレート',
+  flush: 'フラッシュ',
+  fullHouse: 'フルハウス',
+  fourOfAKind: 'フォーカード',
+  straightFlush: 'ストレートフラッシュ',
+};
+
 /** 勝者行に降り注ぐチップバースト(純装飾。M3-B: 勝者へのチップ吸い込み) */
 function ChipBurst() {
   const offsets = [-70, -25, 20, 65, -48, 42];
@@ -59,18 +71,6 @@ function BurstChip({ offsetX, delay }: { offsetX: number; delay: number }) {
   );
 }
 
-const RANK_LABEL: Record<string, string> = {
-  highCard: 'ハイカード',
-  onePair: 'ワンペア',
-  twoPair: 'ツーペア',
-  threeOfAKind: 'スリーカード',
-  straight: 'ストレート',
-  flush: 'フラッシュ',
-  fullHouse: 'フルハウス',
-  fourOfAKind: 'フォーカード',
-  straightFlush: 'ストレートフラッシュ',
-};
-
 /**
  * ハンド終了画面(Web版の 1:1 移植)。showdown/fold勝ちの判定と分配額の導出は
  * selectHandCompleteView に集約(コンポーネントにゲームロジックを書かない)。
@@ -78,6 +78,8 @@ const RANK_LABEL: Record<string, string> = {
  * all-in ランアウト(runOutFrom !== null)では、手札を先に公開したうえでボードを
  * ストリートごとに時間差でめくり、勝敗情報はめくり終わるまで表示しない。
  * gameOver 直行時は phase から導出し、最終ハンドのあと内部で GameOverScreen へ進む。
+ *
+ * showdown 確定後は文字説明なしで、ベスト5=金枠・未使用=減光、役名バッジのみ。
  */
 export function HandCompleteScreen() {
   const state = useGameStore();
@@ -150,7 +152,6 @@ export function HandCompleteScreen() {
           end={{ x: 0.9, y: 1 }}
           style={styles.board}
         >
-          <Text style={styles.boardLabel}>ボード</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {state.communityCards.slice(0, revealedCount).map((c, i) =>
               runOutFrom !== null && i >= runOutFrom ? (
@@ -190,24 +191,32 @@ export function HandCompleteScreen() {
                 )}
               </View>
               {entry.cards && entry.handRank ? (
-                <View style={styles.entryCards}>
+                <View style={styles.entryBody}>
+                  {/* 手札 → ボード。金枠=使用 / 減光=未使用。説明文は出さない */}
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {entry.cards.map((c, idx) =>
-                      runOutFrom !== null ? (
-                        // all-in showdown: 手札もめくって公開する
-                        // dimmed = 役の最良5枚に使われなかったカード(キッカー未採用の装飾。比較自体はscoreで実施済み)
-                        <FlipCard
-                          key={c}
+                    {entry.cards.map((c) => (
+                      <CardView
+                        key={c}
+                        card={c}
+                        size="sm"
+                        highlighted={done && best.has(c)}
+                        dimmed={done && !best.has(c)}
+                      />
+                    ))}
+                  </View>
+                  {done && (
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                      {state.communityCards.map((c) => (
+                        <CardView
+                          key={`board-${entry.playerId}-${c}`}
                           card={c}
                           size="sm"
-                          delay={idx * 140}
-                          dimmed={done && !best.has(c)}
+                          highlighted={best.has(c)}
+                          dimmed={!best.has(c)}
                         />
-                      ) : (
-                        <CardView key={c} card={c} size="sm" dimmed={done && !best.has(c)} />
-                      ),
-                    )}
-                  </View>
+                      ))}
+                    </View>
+                  )}
                   {done && (
                     <View style={[styles.rankBadge, won && { backgroundColor: colors.gold }]}>
                       <Text style={[styles.rankBadgeText, won && { color: colors.zinc900 }]}>
@@ -251,7 +260,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  boardLabel: { fontSize: 10, letterSpacing: 2, color: 'rgba(209,250,229,0.6)' },
   entries: { width: '100%', maxWidth: 384, gap: 12 },
   entry: {
     borderRadius: 16,
@@ -260,12 +268,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(24,24,27,0.85)',
     padding: 16,
     gap: 8,
+    overflow: 'hidden', // ChipBurst のはみ出しで左端が濁るのを防ぐ
   },
   entryWon: { borderColor: 'rgba(251,191,36,0.6)', backgroundColor: 'rgba(69,26,3,0.3)' },
   entryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   entryName: { fontWeight: '700', color: colors.foreground },
-  entryCards: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  entryBody: { gap: 10 },
   rankBadge: {
+    alignSelf: 'flex-start',
     borderRadius: 999,
     backgroundColor: colors.zinc800,
     paddingHorizontal: 12,

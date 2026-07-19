@@ -24,16 +24,19 @@ const SIZE = CARD_SIZE;
 
 /**
  * 1枚の表向きカード。呼び出し側が「表示してよい手札/公開カード」であることを保証すること。
- * dimmed はショーダウンで役に使われなかったカードの減光表示(公開済みカードの装飾であり「隠し」ではない)。
+ * - highlighted: 役の構成に使われた札(金枠)
+ * - dimmed: 未使用札の軽い減光(カード単位のみ。画面全体を濁らせない)
  */
 export function CardView({
   card,
   size = 'md',
   dimmed = false,
+  highlighted = false,
 }: {
   card: Card;
   size?: CardSize;
   dimmed?: boolean;
+  highlighted?: boolean;
 }) {
   const suit = card[0];
   const rank = formatRank(card.slice(1));
@@ -45,7 +48,8 @@ export function CardView({
       style={[
         styles.card,
         { height: s.h, width: s.w, borderRadius: s.r },
-        dimmed && { opacity: 0.35 },
+        dimmed && { opacity: 0.55 },
+        highlighted && styles.cardHighlighted,
       ]}
     >
       <View>
@@ -123,6 +127,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
+  },
+  cardHighlighted: {
+    borderWidth: 2.5,
+    borderColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.55,
+    shadowRadius: 6,
   },
   cornerText: { fontWeight: '700', lineHeight: undefined },
   centerWrap: {

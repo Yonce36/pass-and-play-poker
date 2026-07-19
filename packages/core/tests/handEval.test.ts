@@ -1,7 +1,7 @@
 // Phase 4: handEval のテスト（SPEC 3.10 / セクション7 準拠、テスト先行）
 // カード表記はスート先行: 'HA' = ハートのA（SPEC 3.1）
 import { describe, expect, it } from 'vitest';
-import { compareScores, evaluateHand } from '../src/handEval';
+import { compareScores, describeHand, evaluateHand } from '../src/handEval';
 import type { Card } from '../src/types';
 
 const eva = (hole: Card[], community: Card[]) => evaluateHand('p1', hole, community);
@@ -171,5 +171,25 @@ describe('compareScores: 辞書順比較', () => {
 
   it('完全一致は 0', () => {
     expect(compareScores([4, 5], [4, 5])).toBe(0);
+  });
+});
+
+describe('describeHand: 役とキッカーの表示文', () => {
+  it('ワンペアはペアランクとキッカーを分けて返す', () => {
+    const r = eva(['HA', 'CK'], ['DA', 'S8', 'H6', 'C4', 'D2']);
+    const d = describeHand(r.handRank, r.score);
+    expect(d.title).toContain('ワンペア');
+    expect(d.title).toContain('A');
+    expect(d.kickerLine).toMatch(/キッカー/);
+    expect(d.kickerLine).toContain('K');
+  });
+
+  it('ストレートはキッカー行なし', () => {
+    // ホールがストレートの一部: 5-6 / 7-8-9 ボード → 9ハイストレート
+    const r = eva(['H5', 'D6'], ['C7', 'S8', 'H9', 'D2', 'C3']);
+    expect(r.handRank).toBe('straight');
+    const d = describeHand(r.handRank, r.score);
+    expect(d.title).toContain('ストレート');
+    expect(d.kickerLine).toBeNull();
   });
 });

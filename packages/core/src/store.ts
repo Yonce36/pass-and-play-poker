@@ -196,6 +196,8 @@ export interface HandCompleteEntry {
   cards: Card[] | null;
   /** showdown のときのみ。役に使われた最良5枚（UIのハイライト用） */
   bestFiveCards: Card[] | null;
+  /** showdown のときのみ。describeHand / 比較用の数値タプル */
+  score: number[] | null;
   /**
    * 役の強さ(score=役+キッカー辞書順)でこのハンドの最強と並んだか。
    * サイドポットの返却だけで amount>0 でも、役負けなら false（誤ってチョップ表示しない）。
@@ -248,6 +250,7 @@ export function selectHandCompleteView(state: GameState): {
               handRank: null,
               cards: null,
               bestFiveCards: null,
+              score: null,
               isHandWinner: true,
             },
           ]
@@ -280,15 +283,19 @@ export function selectHandCompleteView(state: GameState): {
     potTotal,
     isShowdown: true,
     isChop,
-    entries: participants.map((p) => ({
-      playerId: p.id,
-      name: p.name,
-      amount: payouts[p.id] ?? 0,
-      handRank: resultById.get(p.id)!.handRank,
-      cards: p.cards,
-      bestFiveCards: resultById.get(p.id)!.bestFiveCards,
-      isHandWinner: handWinnerIds.has(p.id),
-    })),
+    entries: participants.map((p) => {
+      const result = resultById.get(p.id)!;
+      return {
+        playerId: p.id,
+        name: p.name,
+        amount: payouts[p.id] ?? 0,
+        handRank: result.handRank,
+        cards: p.cards,
+        bestFiveCards: result.bestFiveCards,
+        score: result.score,
+        isHandWinner: handWinnerIds.has(p.id),
+      };
+    }),
   };
 }
 

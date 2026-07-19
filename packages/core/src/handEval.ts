@@ -136,3 +136,89 @@ export function compareScores(a: number[], b: number[]): number {
   }
   return 0;
 }
+
+const RANK_DISPLAY: Record<number, string> = {
+  2: '2',
+  3: '3',
+  4: '4',
+  5: '5',
+  6: '6',
+  7: '7',
+  8: '8',
+  9: '9',
+  10: '10',
+  11: 'J',
+  12: 'Q',
+  13: 'K',
+  14: 'A',
+};
+
+function formatRankValue(v: number): string {
+  return RANK_DISPLAY[v] ?? String(v);
+}
+
+function formatRankList(values: number[]): string {
+  return values.map(formatRankValue).join('-');
+}
+
+/**
+ * 役+スコアから表示用ラベルを作る（UI専用の説明。比較には score 本体を使う）。
+ * score[0] は役強度、以降は handEval の rest（主ランク・キッカー）。
+ */
+export function describeHand(
+  handRank: HandRank,
+  score: number[],
+): { title: string; kickerLine: string | null } {
+  const r = score.slice(1);
+  switch (handRank) {
+    case 'highCard':
+      return {
+        title: `ハイカード ${formatRankValue(r[0] ?? 0)}`,
+        kickerLine: r.length > 1 ? `キッカー ${formatRankList(r.slice(1))}` : null,
+      };
+    case 'onePair':
+      return {
+        title: `ワンペア (${formatRankValue(r[0] ?? 0)})`,
+        kickerLine: r.length > 1 ? `キッカー ${formatRankList(r.slice(1))}` : null,
+      };
+    case 'twoPair':
+      return {
+        title: `ツーペア (${formatRankValue(r[0] ?? 0)} と ${formatRankValue(r[1] ?? 0)})`,
+        kickerLine: r[2] !== undefined ? `キッカー ${formatRankValue(r[2])}` : null,
+      };
+    case 'threeOfAKind':
+      return {
+        title: `スリーカード (${formatRankValue(r[0] ?? 0)})`,
+        kickerLine: r.length > 1 ? `キッカー ${formatRankList(r.slice(1))}` : null,
+      };
+    case 'straight':
+      return {
+        title: `ストレート (${formatRankValue(r[0] ?? 0)} ハイ)`,
+        kickerLine: null,
+      };
+    case 'flush':
+      return {
+        title: 'フラッシュ',
+        kickerLine: r.length > 0 ? `構成 ${formatRankList(r)}` : null,
+      };
+    case 'fullHouse':
+      return {
+        title: `フルハウス (${formatRankValue(r[0] ?? 0)} フルオブ ${formatRankValue(r[1] ?? 0)})`,
+        kickerLine: null,
+      };
+    case 'fourOfAKind':
+      return {
+        title: `フォーカード (${formatRankValue(r[0] ?? 0)})`,
+        kickerLine: r[1] !== undefined ? `キッカー ${formatRankValue(r[1])}` : null,
+      };
+    case 'straightFlush':
+      return {
+        title: `ストレートフラッシュ (${formatRankValue(r[0] ?? 0)} ハイ)`,
+        kickerLine: null,
+      };
+    default: {
+      const _exhaustive: never = handRank;
+      return { title: String(_exhaustive), kickerLine: null };
+    }
+  }
+}
