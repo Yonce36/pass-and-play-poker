@@ -54,6 +54,11 @@
 - コミットメッセージ: `feat(core): ...` / `test: ...` / `chore: ...` 形式
 - 難所（betting / sidePot）は feature ブランチで作業し、main へは監査後にマージ
 
+## マルチモデル運用
+
+メイン開発は docs/OPERATIONS.md の分担(ゲート担当=Claude / Codex=境界付き実装 / Grok=クリエイティブ)に従う。
+完了の定義は「監査パス + AI_HANDOFF.md 更新 + commit」。Codex・Grok の成果物はゲート担当の監査を経てから main へ載せる。
+
 ## サブエージェント
 
 - rules-auditor: ポーカールールと SPEC.md の整合監査（読み取り専用）

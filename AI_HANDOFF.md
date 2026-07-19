@@ -1,25 +1,15 @@
 # AI_HANDOFF.md
 
-## ⚠️ メイン開発の移管について(2026-07-18、ユーザー決定)
+## ⚠️ 運用体制(2026-07-19 確定。詳細は docs/OPERATIONS.md)
 
-メイン開発エージェントを Grok に移管する。新しいメインエージェントは着手前に必ずこの順で読むこと:
+マルチモデル分担で進める: **ゲート担当(Fable 5 → 使えなくなったら Opus 4.8。Claude Code上)** が
+フェーズ分解・レビュー・監査・commit/push を持ち、**Codex(GPT)** が境界付き実装ワーカー、
+**Grok 4.5** がクリエイティブ(素材・アイデア・壁打ち)。
 
-1. `CLAUDE.md` — 絶対ルール(特に**手札漏洩防止**と「テストを通すためのテスト改変禁止」。エージェントが何であれ適用される契約)
-2. `docs/SPEC.md` / `docs/STATE_MACHINE.md` — ルール・データモデル・状態遷移の正
-3. 本ファイルの以下 — 現在地と次のタスク
-
-### 移管後の監査体制(重要)
-
-従来の監査サブエージェント(rules-auditor / leak-auditor / test-guardian)は Claude Code 環境の仕組みのため、移管後は次のいずれかで代替する:
-
-- **推奨**: 各フェーズ完了時に Claude Code セッションへ「独立レビュー」を依頼する(コミット前。これまで出荷前に CRITICAL 5件を検出してきた工程)
-- 代替: `.claude/agents/rules-auditor.md` / `leak-auditor.md` / `test-guardian.md` のチェックリストをセルフ監査として実施し、結果を本ファイルに記録する
-
-### 変更してはいけないもの(人間の承認が必要)
-
-- `packages/core` のロジックとテストの期待値(SPEC 確定仕様。テスト120件は仕様の写し)
-- persist name `'pass-and-play-poker'`(変えると既存ユーザーのセーブが消える)
-- 手札漏洩防止の実装(selectVisibleCards 経由のみ / SafePlayer props / AppState lock / FLAG_SECURE / hydration ゲート)。触れる変更をしたら必ず監査(上記)を通す
+- どのモデルも着手前に **CLAUDE.md → docs/OPERATIONS.md → 本ファイル** の順で読むこと
+- 完了の定義: 動いた ≠ 完了。**監査パス + AI_HANDOFF 更新 + commit までが1単位**
+- 鉄則: Codex は commit しない / handoff・reveal・persist・core はゲート担当専属 /
+  不可侵事項(core ロジック・テスト期待値・persist name・漏洩防止実装)は人間承認なしに変更禁止
 
 ## 現在のPhaseと完了内容
 
