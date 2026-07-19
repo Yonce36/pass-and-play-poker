@@ -50,9 +50,14 @@ export function HandCompleteScreen({
   }, [revealedCount]);
   const done = revealedCount >= 5;
 
-  const winners = view.entries.filter((e) => e.amount > 0);
-  const winnerLabel = winners.map((w) => w.name).join(' / ');
-  const isChop = winners.length > 1;
+  // バナーは役スコア(キッカー込み)の勝者。amount>0 だとサイドポット返却も混ざり誤チョップになる
+  const handWinners = view.entries.filter((e) => e.isHandWinner);
+  const winnerLabel = handWinners.map((w) => w.name).join(' / ');
+  const isChop = view.isChop;
+  const bannerAmount = isChop
+    ? handWinners.reduce((s, w) => s + w.amount, 0)
+    : (handWinners[0]?.amount ??
+      view.entries.filter((e) => e.amount > 0).reduce((s, w) => s + w.amount, 0));
 
   return (
     <div className="animate-screen-fade flex flex-1 flex-col items-center gap-5 overflow-y-auto p-5">
@@ -64,10 +69,7 @@ export function HandCompleteScreen({
           </p>
           <h1 className="text-3xl font-black">{winnerLabel}</h1>
           <div className="animate-chip-float">
-            <ChipAmount
-              amount={winners.reduce((s, w) => s + w.amount, 0)}
-              className="text-xl text-gold"
-            />
+            <ChipAmount amount={bannerAmount} className="text-xl text-gold" />
           </div>
         </div>
       ) : (
@@ -95,7 +97,7 @@ export function HandCompleteScreen({
 
       <div className="flex w-full max-w-sm flex-col gap-3">
         {view.entries.map((entry) => {
-          const won = done && entry.amount > 0;
+          const won = done && entry.isHandWinner;
           const best = new Set(entry.bestFiveCards ?? []);
           return (
             <div
@@ -106,7 +108,12 @@ export function HandCompleteScreen({
             >
               <div className="flex items-center justify-between">
                 <p className="font-bold">{entry.name}</p>
-                {won && <ChipAmount amount={entry.amount} className="text-gold" />}
+                {done && entry.amount > 0 && (
+                  <ChipAmount
+                    amount={entry.amount}
+                    className={won ? 'text-gold' : 'text-zinc-300'}
+                  />
+                )}
               </div>
               {entry.cards && entry.handRank ? (
                 <div className="mt-2 flex items-center justify-between">

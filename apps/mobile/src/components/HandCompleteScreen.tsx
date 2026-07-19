@@ -112,9 +112,13 @@ export function HandCompleteScreen({
     if (done) haptics.win();
   }, [done]);
 
-  const winners = view.entries.filter((e) => e.amount > 0);
-  const winnerLabel = winners.map((w) => w.name).join(' / ');
-  const isChop = winners.length > 1;
+  // バナーは役スコア(キッカー込み)の勝者。amount>0 だとサイドポット返却も混ざり誤チョップになる
+  const handWinners = view.entries.filter((e) => e.isHandWinner);
+  const winnerLabel = handWinners.map((w) => w.name).join(' / ');
+  const isChop = view.isChop;
+  const bannerAmount = isChop
+    ? handWinners.reduce((s, w) => s + w.amount, 0)
+    : (handWinners[0]?.amount ?? view.entries.filter((e) => e.amount > 0).reduce((s, w) => s + w.amount, 0));
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -125,11 +129,7 @@ export function HandCompleteScreen({
             {isChop ? 'チョップ' : 'WINNER'}
           </Text>
           <Text style={styles.bannerName}>{winnerLabel}</Text>
-          <ChipAmount
-            amount={winners.reduce((s, w) => s + w.amount, 0)}
-            color={colors.gold}
-            fontSize={20}
-          />
+          <ChipAmount amount={bannerAmount} color={colors.gold} fontSize={20} />
         </View>
       ) : (
         <View style={styles.banner}>
@@ -175,14 +175,16 @@ export function HandCompleteScreen({
 
       <View style={styles.entries}>
         {view.entries.map((entry) => {
-          const won = done && entry.amount > 0;
+          const won = done && entry.isHandWinner;
           const best = new Set(entry.bestFiveCards ?? []);
           return (
             <View key={entry.playerId} style={[styles.entry, won && styles.entryWon]}>
               {won && <ChipBurst />}
               <View style={styles.entryHeader}>
                 <Text style={styles.entryName}>{entry.name}</Text>
-                {won && <ChipAmount amount={entry.amount} color={colors.gold} />}
+                {done && entry.amount > 0 && (
+                  <ChipAmount amount={entry.amount} color={won ? colors.gold : colors.zinc300} />
+                )}
               </View>
               {entry.cards && entry.handRank ? (
                 <View style={styles.entryCards}>
@@ -190,6 +192,7 @@ export function HandCompleteScreen({
                     {entry.cards.map((c, idx) =>
                       runOutFrom !== null ? (
                         // all-in showdown: 手札もめくって公開する
+                        // dimmed = 役の最良5枚に使われなかったカード(キッカー未採用の装飾。比較自体はscoreで実施済み)
                         <FlipCard
                           key={c}
                           card={c}

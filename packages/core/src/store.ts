@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { applyAction, postBlinds, type PlayerAction } from './betting';
 import { createDeck, shuffleDeck } from './deck';
-import { evaluateHand } from './handEval';
+import { compareScores, evaluateHand } from './handEval';
 import { distributePots, type Payouts } from './showdown';
 import { buildPots } from './sidePot';
 import type {
@@ -196,6 +196,11 @@ export interface HandCompleteEntry {
   cards: Card[] | null;
   /** showdown のときのみ。役に使われた最良5枚（UIのハイライト用） */
   bestFiveCards: Card[] | null;
+  /**
+   * 役の強さ(score=役+キッカー辞書順)でこのハンドの最強と並んだか。
+   * サイドポットの返却だけで amount>0 でも、役負けなら false（誤ってチョップ表示しない）。
+   */
+  isHandWinner: boolean;
 }
 
 /**
@@ -205,10 +210,16 @@ export interface HandCompleteEntry {
  * finalizeHandComplete 後は敗者が busted に変わるため status active/allIn だけでは判定できず、
  * 逆に status !== 'folded' だけでは前ハンドまでに busted した傍観者（拠出0）が混入し
  * fold勝ちを showdown と誤認して手札を公開してしまう（3人以上で発生）。
+ *
+ * 勝者バナー用 isChop / isHandWinner は「獲得額>0」ではなく score 比較で決める。
+ * 2人でサイドポットがあるとき、役勝ちとポット返却の両方が amount>0 になりうるが、
+ * それはチョップではない（キッカー込みの役比較で単独勝者を出す）。
  */
 export function selectHandCompleteView(state: GameState): {
   potTotal: number;
   isShowdown: boolean;
+  /** 役スコアが並んだ参加者が2人以上（真のチョップ）。サイドポット返却のみでは true にしない */
+  isChop: boolean;
   entries: HandCompleteEntry[];
 } {
   const potTotal = state.players.reduce((sum, p) => sum + p.totalContribution, 0);
@@ -227,6 +238,7 @@ export function selectHandCompleteView(state: GameState): {
     return {
       potTotal,
       isShowdown: false,
+      isChop: false,
       entries: winner
         ? [
             {
@@ -236,6 +248,7 @@ export function selectHandCompleteView(state: GameState): {
               handRank: null,
               cards: null,
               bestFiveCards: null,
+              isHandWinner: true,
             },
           ]
         : [],
@@ -252,9 +265,21 @@ export function selectHandCompleteView(state: GameState): {
     state.dealerButtonPlayerId!,
   );
   const resultById = new Map(results.map((r) => [r.playerId, r]));
+
+  // 役の勝敗はポット構造と独立に、参加者全員の score（役+キッカー）で決める
+  let bestScore = results[0].score;
+  for (const r of results) {
+    if (compareScores(r.score, bestScore) > 0) bestScore = r.score;
+  }
+  const handWinnerIds = new Set(
+    results.filter((r) => compareScores(r.score, bestScore) === 0).map((r) => r.playerId),
+  );
+  const isChop = handWinnerIds.size > 1;
+
   return {
     potTotal,
     isShowdown: true,
+    isChop,
     entries: participants.map((p) => ({
       playerId: p.id,
       name: p.name,
@@ -262,6 +287,7 @@ export function selectHandCompleteView(state: GameState): {
       handRank: resultById.get(p.id)!.handRank,
       cards: p.cards,
       bestFiveCards: resultById.get(p.id)!.bestFiveCards,
+      isHandWinner: handWinnerIds.has(p.id),
     })),
   };
 }
