@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { selectHandCompleteView, useGameStore } from '@/store/gameStore';
 import { CardSlot, CardView, ChipAmount } from './CardView';
+import { GameOverScreen } from './GameOverScreen';
 
 const RANK_LABEL: Record<string, string> = {
   highCard: 'ハイカード',
@@ -26,18 +27,14 @@ const RANK_LABEL: Record<string, string> = {
  * 残りのボードをストリートごとに時間差でめくり、勝敗情報(勝者バナー・獲得額・役)は
  * めくり終わるまで表示しない。演出は表示タイミングの制御のみで、結果は確定済み。
  *
- * gameOver 直行時(all-in で敗者が bust)は page.tsx から onNext/nextLabel が渡され、
- * この画面を経由してから最終結果へ進む。
+ * gameOver 直行時(all-in で敗者が bust)は phase から導出し、最終ハンド表示のあと
+ * 内部 state で GameOverScreen へ進む(関数 props を渡さず serializable 警告を避ける)。
  */
-export function HandCompleteScreen({
-  onNext,
-  nextLabel = '次のハンドへ',
-}: {
-  onNext?: () => void;
-  nextLabel?: string;
-}) {
+export function HandCompleteScreen() {
   const state = useGameStore();
   const startNextHand = useGameStore((s) => s.startNextHand);
+  const isGameOver = state.phase === 'gameOver';
+  const [finalHandSeen, setFinalHandSeen] = useState(false);
   const view = selectHandCompleteView(state);
 
   const runOutFrom = view.isShowdown ? state.runOutFrom : null;
@@ -58,6 +55,11 @@ export function HandCompleteScreen({
     ? handWinners.reduce((s, w) => s + w.amount, 0)
     : (handWinners[0]?.amount ??
       view.entries.filter((e) => e.amount > 0).reduce((s, w) => s + w.amount, 0));
+
+  // hooks の後で分岐(rules-of-hooks)
+  if (isGameOver && finalHandSeen) {
+    return <GameOverScreen />;
+  }
 
   return (
     <div className="animate-screen-fade flex flex-1 flex-col items-center gap-5 overflow-y-auto p-5">
@@ -82,7 +84,7 @@ export function HandCompleteScreen({
 
       {/* コミュニティカード(showdown時のみ意味がある) */}
       {view.isShowdown && (
-        <div className="flex flex-col items-center gap-2 rounded-[2rem] border-4 border-rail bg-[radial-gradient(ellipse_at_center,var(--color-felt-light)_0%,var(--color-felt)_78%)] px-5 py-4">
+        <div className="flex flex-col items-center gap-2 rounded-4xl border-4 border-rail bg-[radial-gradient(ellipse_at_center,var(--color-felt-light)_0%,var(--color-felt)_78%)] px-5 py-4">
           <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-100/60">ボード</p>
           <div className="flex gap-1.5">
             {state.communityCards.slice(0, revealedCount).map((c, i) => (
@@ -149,10 +151,10 @@ export function HandCompleteScreen({
       {done && (
         <button
           type="button"
-          onClick={onNext ?? (() => startNextHand())}
+          onClick={() => (isGameOver ? setFinalHandSeen(true) : startNextHand())}
           className="animate-screen-fade mt-auto w-full max-w-sm rounded-full bg-emerald-600 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-950/50 active:scale-[0.98] active:bg-emerald-700"
         >
-          {nextLabel}
+          {isGameOver ? '最終結果へ' : '次のハンドへ'}
         </button>
       )}
     </div>

@@ -14,6 +14,7 @@ import { haptics } from '../haptics';
 import { colors, gradients } from '../theme';
 import { CardSlot, CardView, ChipAmount } from './CardView';
 import { FlipCard } from './FlipCard';
+import { GameOverScreen } from './GameOverScreen';
 
 /** 勝者行に降り注ぐチップバースト(純装飾。M3-B: 勝者へのチップ吸い込み) */
 function ChipBurst() {
@@ -76,16 +77,13 @@ const RANK_LABEL: Record<string, string> = {
  * fold勝ちでは cards が null で返るため手札は描画されない(STATE_MACHINE 3)。
  * all-in ランアウト(runOutFrom !== null)では、手札を先に公開したうえでボードを
  * ストリートごとに時間差でめくり、勝敗情報はめくり終わるまで表示しない。
+ * gameOver 直行時は phase から導出し、最終ハンドのあと内部で GameOverScreen へ進む。
  */
-export function HandCompleteScreen({
-  onNext,
-  nextLabel = '次のハンドへ',
-}: {
-  onNext?: () => void;
-  nextLabel?: string;
-}) {
+export function HandCompleteScreen() {
   const state = useGameStore();
   const startNextHand = useGameStore((s) => s.startNextHand);
+  const isGameOver = state.phase === 'gameOver';
+  const [finalHandSeen, setFinalHandSeen] = useState(false);
   const view = selectHandCompleteView(state);
 
   const runOutFrom = view.isShowdown ? state.runOutFrom : null;
@@ -119,6 +117,11 @@ export function HandCompleteScreen({
   const bannerAmount = isChop
     ? handWinners.reduce((s, w) => s + w.amount, 0)
     : (handWinners[0]?.amount ?? view.entries.filter((e) => e.amount > 0).reduce((s, w) => s + w.amount, 0));
+
+  // hooks の後で分岐(rules-of-hooks)
+  if (isGameOver && finalHandSeen) {
+    return <GameOverScreen />;
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -223,10 +226,10 @@ export function HandCompleteScreen({
 
       {done && (
         <Pressable
-          onPress={onNext ?? (() => startNextHand())}
+          onPress={() => (isGameOver ? setFinalHandSeen(true) : startNextHand())}
           style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}
         >
-          <Text style={styles.nextButtonText}>{nextLabel}</Text>
+          <Text style={styles.nextButtonText}>{isGameOver ? '最終結果へ' : '次のハンドへ'}</Text>
         </Pressable>
       )}
     </ScrollView>

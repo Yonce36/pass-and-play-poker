@@ -68,7 +68,7 @@ export function CardView({
 export function CardBack({ size = 'md' }: { size?: CardSize }) {
   return (
     <div
-      className={`flex items-center justify-center border-2 border-white/70 bg-gradient-to-br from-blue-800 to-blue-950 shadow-md shadow-black/40 ${SIZE_CLASS[size]}`}
+      className={`flex items-center justify-center border-2 border-white/70 bg-linear-to-br from-blue-800 to-blue-950 shadow-md shadow-black/40 ${SIZE_CLASS[size]}`}
     >
       <div className="flex h-[70%] w-[65%] items-center justify-center rounded-sm border border-blue-400/40 bg-[repeating-linear-gradient(45deg,#1e3a8a_0px,#1e3a8a_3px,#172554_3px,#172554_6px)]">
         <span className="text-[10px] text-blue-300/70">♠</span>
@@ -91,7 +91,7 @@ export function CardSlot({ size = 'md' }: { size?: CardSize }) {
 export function ChipAmount({ amount, className = '' }: { amount: number; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 ${className}`}>
-      <span className="relative inline-block h-4 w-4 rounded-full border-[2.5px] border-dashed border-white/80 bg-gradient-to-br from-rose-500 to-rose-700 shadow-sm" />
+      <span className="relative inline-block h-4 w-4 rounded-full border-[2.5px] border-dashed border-white/80 bg-linear-to-br from-rose-500 to-rose-700 shadow-sm" />
       <span className="font-mono font-semibold tabular-nums">{amount.toLocaleString()}</span>
     </span>
   );

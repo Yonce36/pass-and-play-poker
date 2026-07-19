@@ -9,17 +9,6 @@ import { HandoffGuard } from './src/components/HandoffGuard';
 import { SetupScreen } from './src/components/SetupScreen';
 import { TableScreen } from './src/components/TableScreen';
 import { HandCompleteScreen } from './src/components/HandCompleteScreen';
-import { GameOverScreen } from './src/components/GameOverScreen';
-
-/**
- * gameOver 直行時(all-in で敗者が bust)も最終ハンドのショーダウンを先に見せる。
- * phase が gameOver を離れるとアンマウントされ finalHandSeen は自然にリセットされる。
- */
-function GameOverFlow() {
-  const [finalHandSeen, setFinalHandSeen] = useState(false);
-  if (finalHandSeen) return <GameOverScreen />;
-  return <HandCompleteScreen onNext={() => setFinalHandSeen(true)} nextLabel="最終結果へ" />;
-}
 
 function Screen() {
   const phase = useGameStore((s) => s.phase);
@@ -28,9 +17,9 @@ function Screen() {
     case 'setup':
       return <SetupScreen />;
     case 'handComplete':
-      return <HandCompleteScreen />;
     case 'gameOver':
-      return <GameOverFlow />;
+      // gameOver 直行時も HandCompleteScreen が最終ハンド→GameOverScreen を内部で切り替える
+      return <HandCompleteScreen />;
     case 'postingBlinds':
     case 'preflop':
     case 'flop':

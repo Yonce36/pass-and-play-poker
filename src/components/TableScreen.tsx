@@ -47,7 +47,7 @@ function Seat({
         isActive ? 'animate-turn-glow' : ''
       } ${folded ? 'opacity-50' : ''}`}
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-600 to-zinc-800 text-lg font-bold ring-2 ring-white/20">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-zinc-600 to-zinc-800 text-lg font-bold ring-2 ring-white/20">
         {player.name.charAt(0)}
       </div>
 

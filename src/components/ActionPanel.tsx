@@ -152,7 +152,7 @@ export function ActionPanel({ viewerId }: { viewerId: string }) {
         type="button"
         disabled={!canAllIn}
         onClick={() => act('allIn')}
-        className="rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 py-3.5 font-bold text-white shadow-lg shadow-rose-950/40 active:scale-[0.98] disabled:opacity-40"
+        className="rounded-xl bg-linear-to-r from-rose-600 to-rose-700 py-3.5 font-bold text-white shadow-lg shadow-rose-950/40 active:scale-[0.98] disabled:opacity-40"
       >
         オールイン {maxReachable}
       </button>

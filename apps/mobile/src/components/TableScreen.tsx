@@ -17,16 +17,20 @@ import { TurnGlow } from './TurnGlow';
 
 type Point = { x: number; y: number };
 
+type Flight = { id: number; from: Point; to: Point; delay: number };
+
+/** 飛翔チップの一意 ID(render/effect 外で採番し react-hooks/refs を避ける) */
+let nextFlightId = 1;
+
 /**
  * ベット確定時に席からポットへ飛ぶチップ(M3-B。純装飾)。
- * 金額情報は持たず、座標はレイアウト計測値のみ。飛び終わると親が破棄する。
+ * 金額情報は持たず、座標はレイアウト計測値のみ。
  */
 function FlyingChip({ from, to, delay }: { from: Point; to: Point; delay: number }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withDelay(delay, withTiming(1, { duration: 480, easing: Easing.in(Easing.quad) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [delay, p]);
   const style = useAnimatedStyle(() => ({
     opacity: p.value < 0.9 ? 1 : (1 - p.value) * 10,
     transform: [
@@ -146,48 +150,61 @@ export function TableScreen() {
   const potCollected = totalContribution - currentBets;
 
   // ===== チップ飛翔(M3-B): currentBet の増加を検知して席→ポットへ飛ばす =====
-  const [flights, setFlights] = useState<
-    { id: number; from: Point; to: Point; delay: number }[]
-  >([]);
-  const layoutRef = useRef<{ seats: Record<string, Point>; pot: Point | null }>({
-    seats: {},
-    pot: null,
-  });
+  // - 座標は onLayout(イベント)で state 化(render 中の ref 読みは react-hooks/refs 違反)
+  // - setFlights は effect 同期本体ではなく setTimeout コールバックでのみ呼ぶ
+  //   (react-hooks/set-state-in-effect 回避)
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [seatLayouts, setSeatLayouts] = useState<Record<string, Point>>({});
+  const [potLayout, setPotLayout] = useState<Point | null>(null);
   const prevBetsRef = useRef<Record<string, number> | null>(null);
-  const flightIdRef = useRef(0);
+  const betSignature = players.map((p) => `${p.id}:${p.currentBet}`).join(',');
 
   useEffect(() => {
-    const prev = prevBetsRef.current;
     const next: Record<string, number> = {};
     for (const p of players) next[p.id] = p.currentBet;
-    // 初回(マウント/復元直後)は記録のみで発火しない
-    if (prev) {
-      const spawned: { id: number; from: Point; to: Point; delay: number }[] = [];
-      for (const p of players) {
-        const from = layoutRef.current.seats[p.id];
-        const to = layoutRef.current.pot;
-        if (from && to && p.currentBet > (prev[p.id] ?? 0)) {
-          for (let i = 0; i < 3; i++) {
-            spawned.push({ id: flightIdRef.current++, from, to, delay: i * 70 });
-          }
+    const prev = prevBetsRef.current;
+    prevBetsRef.current = next;
+    // 初回(マウント/復元直後)は記録のみ
+    if (!prev) return;
+
+    const spawned: Flight[] = [];
+    for (const p of players) {
+      const from = seatLayouts[p.id];
+      const to = potLayout;
+      if (from && to && p.currentBet > (prev[p.id] ?? 0)) {
+        for (let i = 0; i < 3; i++) {
+          spawned.push({ id: nextFlightId++, from, to, delay: i * 70 });
         }
       }
-      if (spawned.length > 0) {
-        setFlights((f) => [...f, ...spawned]);
-        const ids = new Set(spawned.map((s) => s.id));
-        setTimeout(() => setFlights((f) => f.filter((fl) => !ids.has(fl.id))), 900);
-      }
     }
-    prevBetsRef.current = next;
-  }, [players]);
+    if (spawned.length === 0) return;
+
+    const ids = new Set(spawned.map((s) => s.id));
+    const startTimer = setTimeout(() => {
+      setFlights((f) => [...f, ...spawned]);
+    }, 0);
+    const endTimer = setTimeout(() => {
+      setFlights((f) => f.filter((fl) => !ids.has(fl.id)));
+    }, 900);
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(endTimer);
+    };
+  }, [betSignature, players, seatLayouts, potLayout]);
 
   const onSeatLayout = (playerId: string) => (e: LayoutChangeEvent) => {
     const { x, y, width, height } = e.nativeEvent.layout;
-    layoutRef.current.seats[playerId] = { x: x + width / 2, y: y + height / 2 };
+    const point = { x: x + width / 2, y: y + height / 2 };
+    setSeatLayouts((prev) => {
+      const cur = prev[playerId];
+      if (cur && cur.x === point.x && cur.y === point.y) return prev;
+      return { ...prev, [playerId]: point };
+    });
   };
   const onFeltLayout = (e: LayoutChangeEvent) => {
     const { x, y, width, height } = e.nativeEvent.layout;
-    layoutRef.current.pot = { x: x + width / 2, y: y + height / 2 };
+    const point = { x: x + width / 2, y: y + height / 2 };
+    setPotLayout((prev) => (prev && prev.x === point.x && prev.y === point.y ? prev : point));
   };
 
   return (
